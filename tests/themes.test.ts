@@ -12,6 +12,12 @@ describe('themes', () => {
     expect(isThemeName('not-a-theme')).toBe(false)
   })
 
+  it('isThemeName rejects inherited Object.prototype properties', () => {
+    expect(isThemeName('toString')).toBe(false)
+    expect(isThemeName('constructor')).toBe(false)
+    expect(isThemeName('hasOwnProperty')).toBe(false)
+  })
+
   it('resolveTheme falls back to default for unknown name', () => {
     expect(resolveTheme('unknown')).toEqual(themes.default)
     expect(resolveTheme(undefined)).toEqual(themes.default)
@@ -29,6 +35,8 @@ describe('themes', () => {
     // 5- and 7-digit hex are invalid in CSS — must fall back.
     expect(normalizeColor('12345', '000')).toBe('000')
     expect(normalizeColor('1234567', '000')).toBe('000')
+    // Double leading `#` must NOT slip through the strip-then-test step.
+    expect(normalizeColor('##fff', '000')).toBe('000')
   })
 
   it('buildTheme merges per-color overrides on top of base theme', () => {

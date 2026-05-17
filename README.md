@@ -100,7 +100,7 @@ Color overrides (`title_color`, `text_color`, `bg_color`, `border_color`) work h
 
 Successful SVG responses are cached at two layers:
 
-1. **Workers Cache API** (`caches.default`) — edge cache, deduplicates concurrent requests and dramatically reduces GitHub API calls. Cache lifetime follows the `Cache-Control` header.
+1. **Workers Cache API** (`caches.default`) — edge cache. Once a response is stored, subsequent requests in the same colo are served from cache without calling GitHub. Note that the Workers Cache API does **not** coalesce simultaneous misses, so a burst of identical uncached requests can each call GitHub before the first response is cached. Cache lifetime follows the `Cache-Control` header.
 2. **`Cache-Control` header** — `public, max-age=${CACHE_SECONDS}, s-maxage=…, stale-while-revalidate=…`. This is also respected by GitHub's `camo` image proxy, which is the biggest win in practice (READMEs are served through camo).
 
 Error responses are cached for 60 seconds.

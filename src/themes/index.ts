@@ -56,7 +56,9 @@ export const themes = {
 export type ThemeName = keyof typeof themes
 
 export const isThemeName = (name: string): name is ThemeName => {
-  return name in themes
+  // `in` would also match inherited keys (`toString`, `constructor`…); use own
+  // property check so `?theme=toString` correctly falls back to default.
+  return Object.hasOwn(themes, name)
 }
 
 export const resolveTheme = (name?: string | null): Theme => {
@@ -64,8 +66,10 @@ export const resolveTheme = (name?: string | null): Theme => {
   return themes.default
 }
 
-// CSS hex colors are exactly 3, 4, 6, or 8 hex digits.
-const hexPattern = /^#?(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
+// CSS hex colors are exactly 3, 4, 6, or 8 hex digits. The leading `#` is
+// stripped before testing, so the pattern itself must NOT also allow `#?` —
+// otherwise inputs like `##fff` would pass and emit `##fff` downstream.
+const hexPattern = /^(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
 
 export const normalizeColor = (raw: string | undefined, fallback: string): string => {
   if (!raw) return fallback

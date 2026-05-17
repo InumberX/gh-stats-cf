@@ -6,9 +6,16 @@ export const parseBoolParam = (raw: string | undefined, fallback: boolean): bool
   return fallback
 }
 
+// Strict: the entire string must be a base-10 integer. `Number.parseInt`
+// alone accepts "10abc"/"1e3" and silently truncates them; reject those so
+// query params behave as a documented `int` type.
+const INTEGER_PATTERN = /^-?\d+$/
+
 export const parseIntParam = (raw: string | undefined, fallback: number): number => {
   if (raw === undefined) return fallback
-  const n = Number.parseInt(raw, 10)
+  const trimmed = raw.trim()
+  if (!INTEGER_PATTERN.test(trimmed)) return fallback
+  const n = Number.parseInt(trimmed, 10)
   return Number.isFinite(n) ? n : fallback
 }
 

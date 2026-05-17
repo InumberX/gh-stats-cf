@@ -10,7 +10,6 @@ type TopLangsResponse = {
   user: {
     repositories: {
       nodes: {
-        name: string
         languages: {
           edges: { size: number; node: { name: string; color: string | null } }[]
         }
@@ -35,7 +34,6 @@ const TOP_LANGS_QUERY = `
         orderBy: { direction: DESC, field: STARGAZERS }
       ) {
         nodes {
-          name
           languages(first: 10, orderBy: { direction: DESC, field: SIZE }) {
             edges {
               size

@@ -11,8 +11,9 @@
   // Set runtime secrets via `wrangler secret put`:
   //   wrangler secret put PAT_1
   //
-  // Optional vars (uncomment to enable; trailing comma after the closing brace
-  // above is valid in JSONC, so this block can be uncommented as-is):
+  // Optional vars (uncomment the block below to enable). The leading `,` on
+  // the first uncommented line becomes the property separator after the
+  // `observability` block above, so this block can be uncommented as-is.
   // ,"vars": {
   //   "CACHE_SECONDS": "86400",
   //   "WHITELIST": "your-github-login"

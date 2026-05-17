@@ -24,10 +24,18 @@ describe('parseBoolParam', () => {
 describe('parseIntParam', () => {
   it('parses valid integers', () => {
     expect(parseIntParam('42', 0)).toBe(42)
+    expect(parseIntParam('-3', 0)).toBe(-3)
+    expect(parseIntParam('  7 ', 0)).toBe(7)
   })
   it('falls back on garbage', () => {
     expect(parseIntParam('abc', 5)).toBe(5)
     expect(parseIntParam(undefined, 5)).toBe(5)
+  })
+  it('rejects partially-numeric strings', () => {
+    expect(parseIntParam('10abc', 5)).toBe(5)
+    expect(parseIntParam('1e3', 5)).toBe(5)
+    expect(parseIntParam('3.14', 5)).toBe(5)
+    expect(parseIntParam('', 5)).toBe(5)
   })
 })
 

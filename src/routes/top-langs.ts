@@ -39,11 +39,16 @@ topLangsRoute.get('/', async (c) => {
     return svgResponse(c, renderErrorCard('Server is missing PAT secret (PAT_1).', theme), 60)
   }
 
+  // Clamp `langs_count` to [1, 20] so a hostile caller can't ask the worker to
+  // render an oversized SVG for accounts with many detected languages.
+  const langsCountRaw = parseIntParam(c.req.query('langs_count'), 5)
+  const langsCount = Math.min(20, Math.max(1, langsCountRaw))
+
   try {
     const languages = await fetchTopLangs(username, {
       pats,
       excludeLangs: parseListParam(c.req.query('exclude_langs')),
-      size: parseIntParam(c.req.query('langs_count'), 5),
+      size: langsCount,
     })
     if (languages.length === 0) {
       return svgResponse(c, renderErrorCard('No languages found for this user.', theme), 60)

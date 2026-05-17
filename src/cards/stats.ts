@@ -33,7 +33,7 @@ const rankCircle = (percentile: number, color: string): string => {
   const offset = circumference * (1 - progress)
   return `
     <g transform="translate(${RANK_CX - RANK_R}, ${RANK_CY - RANK_R})">
-      <circle cx="${RANK_R}" cy="${RANK_R}" r="${RANK_R}" fill="none" stroke="#${color}33" stroke-width="6"/>
+      <circle cx="${RANK_R}" cy="${RANK_R}" r="${RANK_R}" fill="none" stroke="#${color}" stroke-opacity="0.2" stroke-width="6"/>
       <circle
         cx="${RANK_R}" cy="${RANK_R}" r="${RANK_R}"
         fill="none" stroke="#${color}" stroke-width="6"
