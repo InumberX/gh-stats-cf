@@ -1,0 +1,15 @@
+# Copy to .dev.vars for local development with `wrangler dev`.
+# Never commit .dev.vars — it is gitignored.
+
+# GitHub Personal Access Token(s). At least PAT_1 is required.
+# Fine-grained recommended. Scopes: Repository Contents (Read), Metadata (Read).
+PAT_1=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# PAT_2=
+# PAT_3=
+
+# Optional: SVG cache TTL in seconds (default: 1800 = 30min)
+# CACHE_SECONDS=1800
+
+# Optional: comma-separated GitHub logins allowed to query this instance.
+# Leave empty to allow any username.
+# WHITELIST=your-github-login
