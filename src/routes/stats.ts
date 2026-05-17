@@ -6,10 +6,13 @@ import type { AppEnv } from '~/env'
 import { cacheTtlSeconds, collectPats, isAllowedUser } from '~/env'
 import { fetchStats } from '~/fetchers/stats'
 import { buildTheme } from '~/themes'
+import { edgeCache } from '~/utils/edge-cache'
 import { isValidUsername, parseBoolParam } from '~/utils/query'
 import { svgResponse } from '~/utils/svg-response'
 
 export const statsRoute = new Hono<AppEnv>()
+
+statsRoute.use('*', edgeCache())
 
 statsRoute.get('/', async (c) => {
   const env = c.env

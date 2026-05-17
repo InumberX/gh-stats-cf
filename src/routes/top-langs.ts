@@ -6,10 +6,13 @@ import type { AppEnv } from '~/env'
 import { cacheTtlSeconds, collectPats, isAllowedUser } from '~/env'
 import { fetchTopLangs } from '~/fetchers/top-langs'
 import { buildTheme } from '~/themes'
+import { edgeCache } from '~/utils/edge-cache'
 import { isValidUsername, parseBoolParam, parseIntParam, parseListParam } from '~/utils/query'
 import { svgResponse } from '~/utils/svg-response'
 
 export const topLangsRoute = new Hono<AppEnv>()
+
+topLangsRoute.use('*', edgeCache())
 
 topLangsRoute.get('/', async (c) => {
   const env = c.env

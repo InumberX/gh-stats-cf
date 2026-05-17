@@ -27,7 +27,7 @@ export const isAllowedUser = (env: AppEnv['Bindings'], username: string): boolea
 
 export const cacheTtlSeconds = (env: AppEnv['Bindings']): number => {
   const raw = env.CACHE_SECONDS
-  if (!raw) return 1800
+  if (!raw) return 86400
   const n = Number.parseInt(raw, 10)
-  return Number.isFinite(n) && n > 0 ? n : 1800
+  return Number.isFinite(n) && n > 0 ? n : 86400
 }

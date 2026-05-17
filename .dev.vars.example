@@ -7,8 +7,8 @@ PAT_1=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 # PAT_2=
 # PAT_3=
 
-# Optional: SVG cache TTL in seconds (default: 1800 = 30min)
-# CACHE_SECONDS=1800
+# Optional: SVG cache TTL in seconds (default: 86400 = 1 day)
+# CACHE_SECONDS=86400
 
 # Optional: comma-separated GitHub logins allowed to query this instance.
 # Leave empty to allow any username.

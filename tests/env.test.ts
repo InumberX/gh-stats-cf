@@ -24,14 +24,14 @@ describe('isAllowedUser', () => {
 })
 
 describe('cacheTtlSeconds', () => {
-  it('defaults to 1800', () => {
-    expect(cacheTtlSeconds({})).toBe(1800)
+  it('defaults to 86400 (1 day)', () => {
+    expect(cacheTtlSeconds({})).toBe(86400)
   })
   it('parses positive integers', () => {
     expect(cacheTtlSeconds({ CACHE_SECONDS: '60' })).toBe(60)
   })
   it('falls back on garbage', () => {
-    expect(cacheTtlSeconds({ CACHE_SECONDS: 'abc' })).toBe(1800)
-    expect(cacheTtlSeconds({ CACHE_SECONDS: '-5' })).toBe(1800)
+    expect(cacheTtlSeconds({ CACHE_SECONDS: 'abc' })).toBe(86400)
+    expect(cacheTtlSeconds({ CACHE_SECONDS: '-5' })).toBe(86400)
   })
 })

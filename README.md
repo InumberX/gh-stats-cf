@@ -92,6 +92,17 @@ Your cards will be available at `https://<worker-name>.<your-subdomain>.workers.
 
 Color overrides (`title_color`, `text_color`, `bg_color`, `border_color`) work here too.
 
+## Caching
+
+Successful SVG responses are cached at two layers:
+
+1. **Workers Cache API** (`caches.default`) — edge cache, deduplicates concurrent requests and dramatically reduces GitHub API calls. Cache lifetime follows the `Cache-Control` header.
+2. **`Cache-Control` header** — `public, max-age=${CACHE_SECONDS}, s-maxage=…, stale-while-revalidate=…`. This is also respected by GitHub's `camo` image proxy, which is the biggest win in practice (READMEs are served through camo).
+
+Error responses are cached for 60 seconds.
+
+You can verify cache behavior via the `CF-Cache-Status` response header (`HIT` or `MISS`).
+
 ## Environment variables
 
 Set via `wrangler secret put` (recommended for tokens) or in `wrangler.jsonc` `vars` block:
@@ -100,7 +111,7 @@ Set via `wrangler secret put` (recommended for tokens) or in `wrangler.jsonc` `v
 | ----------------- | ------ | ------- | --- |
 | `PAT_1`           | secret | —       | **Required.** GitHub PAT. |
 | `PAT_2` … `PAT_5` | secret | —       | Optional rotation slots. |
-| `CACHE_SECONDS`   | var    | `1800`  | SVG `Cache-Control` max-age. |
+| `CACHE_SECONDS`   | var    | `86400` | SVG `Cache-Control` max-age (default: 1 day). |
 | `WHITELIST`       | var    | —       | Comma-separated GitHub logins allowed to query this instance. Empty means anyone. |
 
 ## Themes
