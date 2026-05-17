@@ -1,20 +1,5 @@
 import type { Theme } from '~/themes'
-
-const escapeXml = (s: string): string =>
-  s.replace(/[&<>"']/g, (c) => {
-    switch (c) {
-      case '&':
-        return '&amp;'
-      case '<':
-        return '&lt;'
-      case '>':
-        return '&gt;'
-      case '"':
-        return '&quot;'
-      default:
-        return '&#39;'
-    }
-  })
+import { escapeXml } from '~/utils/svg'
 
 export const renderErrorCard = (message: string, theme: Theme): string => {
   const width = 495
@@ -26,7 +11,10 @@ export const renderErrorCard = (message: string, theme: Theme): string => {
     viewBox="0 0 ${width} ${height}"
     fill="none"
     role="img"
+    aria-labelledby="titleId descId"
   >
+    <title id="titleId">gh-stats-cf error</title>
+    <desc id="descId">${escapeXml(message)}</desc>
     <style>
       .title { font: 700 16px 'Segoe UI', Ubuntu, Sans-Serif; fill: #${theme.title_color}; }
       .msg { font: 400 13px 'Segoe UI', Ubuntu, Sans-Serif; fill: #${theme.text_color}; }

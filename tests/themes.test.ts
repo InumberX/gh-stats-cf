@@ -19,11 +19,16 @@ describe('themes', () => {
     expect(resolveTheme('radical')).toEqual(themes.radical)
   })
 
-  it('normalizeColor accepts valid hex and falls back on garbage', () => {
+  it('normalizeColor accepts only valid 3/4/6/8-digit hex and falls back otherwise', () => {
     expect(normalizeColor('#FF0000', '000')).toBe('FF0000')
     expect(normalizeColor('aabbcc', '000')).toBe('aabbcc')
+    expect(normalizeColor('abcd', '000')).toBe('abcd')
+    expect(normalizeColor('aabbccdd', '000')).toBe('aabbccdd')
     expect(normalizeColor('not-a-color', '000')).toBe('000')
     expect(normalizeColor(undefined, 'abc')).toBe('abc')
+    // 5- and 7-digit hex are invalid in CSS — must fall back.
+    expect(normalizeColor('12345', '000')).toBe('000')
+    expect(normalizeColor('1234567', '000')).toBe('000')
   })
 
   it('buildTheme merges per-color overrides on top of base theme', () => {

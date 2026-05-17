@@ -68,7 +68,7 @@ Your cards will be available at `https://<worker-name>.<your-subdomain>.workers.
 | ---------------- | ------- | --------- | --- |
 | `username`       | string  | (required)| GitHub login |
 | `theme`          | string  | `default` | One of: `default`, `dark`, `radical`, `merko`, `gruvbox`, `tokyonight` |
-| `count_private`  | bool    | `false`   | Include your private contribution count (requires your own PAT) |
+| `count_private`  | bool    | `false`   | Include your private *commit* count (requires your own PAT). Private repo stars/languages are never exposed. |
 | `show_icons`     | bool    | `false`   | Show row icons |
 | `hide_rank`      | bool    | `false`   | Hide the rank circle |
 | `hide_border`    | bool    | `false`   | Hide the card border |
@@ -91,6 +91,10 @@ Your cards will be available at `https://<worker-name>.<your-subdomain>.workers.
 | `hide_title`    | bool   | `false` | Hide the header title |
 
 Color overrides (`title_color`, `text_color`, `bg_color`, `border_color`) work here too.
+
+> **Privacy note:** stars, languages, and ranking are aggregated **only from public repositories** even when the configured PAT could see private ones. Only the optional `count_private` flag opts the *owner themself* into adding their own private commit count to the displayed total.
+>
+> **Scope note:** "Commits (last year)" reflects GitHub's contribution window (rolling 365 days), not an all-time total. Repository pagination is capped at 10,000 repos per request — accounts beyond that are rare but will be truncated with a log warning.
 
 ## Caching
 

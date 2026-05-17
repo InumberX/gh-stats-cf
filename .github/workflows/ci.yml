@@ -19,9 +19,6 @@ jobs:
 
       - run: npm ci
 
-      - name: Generate Worker types
-        run: npx wrangler types
-
       - name: Typecheck
         run: npm run typecheck
 

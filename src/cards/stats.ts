@@ -1,6 +1,7 @@
 import { renderIcon, type IconName } from '~/cards/icons'
 import type { Stats } from '~/fetchers/stats'
 import type { Theme } from '~/themes'
+import { escapeXml } from '~/utils/svg'
 
 export type StatsCardOptions = {
   showIcons: boolean
@@ -9,27 +10,11 @@ export type StatsCardOptions = {
   hideTitle: boolean
 }
 
-const escapeXml = (s: string): string =>
-  s.replace(/[&<>"']/g, (c) => {
-    switch (c) {
-      case '&':
-        return '&amp;'
-      case '<':
-        return '&lt;'
-      case '>':
-        return '&gt;'
-      case '"':
-        return '&quot;'
-      default:
-        return '&#39;'
-    }
-  })
-
 type Row = { label: string; value: number; icon: IconName }
 
 const ROWS = (stats: Stats): Row[] => [
   { label: 'Total Stars Earned:', value: stats.totalStars, icon: 'star' },
-  { label: 'Total Commits:', value: stats.totalCommits, icon: 'commit' },
+  { label: 'Commits (last year):', value: stats.totalCommits, icon: 'commit' },
   { label: 'Total PRs:', value: stats.totalPRs, icon: 'pr' },
   { label: 'Total Issues:', value: stats.totalIssues, icon: 'issue' },
   { label: 'Contributed to (last year):', value: stats.contributedTo, icon: 'contrib' },
@@ -42,7 +27,9 @@ const RANK_CY = 95
 
 const rankCircle = (percentile: number, color: string): string => {
   const circumference = 2 * Math.PI * RANK_R
-  const progress = Math.max(0, Math.min(100, percentile)) / 100
+  // Lower percentile = better rank (S = <=1, C = 100).
+  // Invert so a top rank fills the ring and a poor rank leaves it nearly empty.
+  const progress = 1 - Math.max(0, Math.min(100, percentile)) / 100
   const offset = circumference * (1 - progress)
   return `
     <g transform="translate(${RANK_CX - RANK_R}, ${RANK_CY - RANK_R})">
@@ -88,8 +75,10 @@ export const renderStatsCard = (stats: Stats, theme: Theme, options: StatsCardOp
   const minHeight = options.hideRank ? rowsTop + contentHeight + 20 : Math.max(rowsTop + contentHeight + 20, 195)
   const height = minHeight
 
-  const titleText = options.hideTitle ? '' : `${escapeXml(stats.name)}'s GitHub Stats`
-  const titleEl = options.hideTitle ? '' : `<text x="${padding}" y="35" class="header">${titleText}</text>`
+  // Raw (unescaped) title text — escape once at every output site.
+  const titleRaw = options.hideTitle ? '' : `${stats.name}'s GitHub Stats`
+  const accessibleTitle = titleRaw || `${stats.login} GitHub Stats`
+  const titleEl = options.hideTitle ? '' : `<text x="${padding}" y="35" class="header">${escapeXml(titleRaw)}</text>`
 
   const rankBlock = options.hideRank
     ? ''
@@ -111,7 +100,7 @@ export const renderStatsCard = (stats: Stats, theme: Theme, options: StatsCardOp
     role="img"
     aria-labelledby="titleId descId"
   >
-    <title id="titleId">${escapeXml(titleText || `${stats.login} GitHub Stats`)}</title>
+    <title id="titleId">${escapeXml(accessibleTitle)}</title>
     <desc id="descId">GitHub stats card for ${escapeXml(stats.login)}</desc>
     <style>
       .header {

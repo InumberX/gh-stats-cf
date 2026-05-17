@@ -33,6 +33,9 @@ type StatsResponse = {
   } | null
 }
 
+// `privacy: PUBLIC` is explicit so that, even when the configured PAT can read
+// the owner's private repositories, only public repo stars and counts are
+// surfaced through this public endpoint.
 const STATS_QUERY = `
   query userInfo($login: String!, $after: String) {
     user(login: $login) {
@@ -55,6 +58,7 @@ const STATS_QUERY = `
         first: 100
         after: $after
         ownerAffiliations: OWNER
+        privacy: PUBLIC
         orderBy: { direction: DESC, field: STARGAZERS }
       ) {
         totalCount
@@ -65,12 +69,12 @@ const STATS_QUERY = `
   }
 `
 
-const exponentialCdf = (x: number): number => 1 - 2 ** -x
+// Safety cap for repository pagination: 100 pages * 100 repos = 10,000 repos.
+// Covers virtually every real GitHub account. If hit, the result is partial
+// and a warning is logged.
+const MAX_REPO_PAGES = 100
 
-const logNormalCdf = (x: number): number => {
-  if (x <= 0) return 0
-  return Math.log(1 + x) / Math.log(1 + Math.max(x, 1))
-}
+const exponentialCdf = (x: number): number => 1 - 2 ** -x
 
 const calculateRank = (input: {
   commits: number
@@ -98,14 +102,16 @@ const calculateRank = (input: {
   const THRESHOLDS = [1, 12.5, 25, 37.5, 50, 62.5, 75, 87.5, 100]
   const LEVELS = ['S', 'A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C']
 
+  // All contributions use exponentialCdf so each metric grows smoothly toward
+  // its weight ceiling as it approaches and exceeds the median.
   const rank =
     1 -
     (COMMITS_WEIGHT * exponentialCdf(input.commits / COMMITS_MEDIAN) +
       PRS_WEIGHT * exponentialCdf(input.prs / PRS_MEDIAN) +
       ISSUES_WEIGHT * exponentialCdf(input.issues / ISSUES_MEDIAN) +
       REVIEWS_WEIGHT * exponentialCdf(input.reviews / REVIEWS_MEDIAN) +
-      STARS_WEIGHT * logNormalCdf(input.stars / STARS_MEDIAN) +
-      FOLLOWERS_WEIGHT * logNormalCdf(input.followers / FOLLOWERS_MEDIAN)) /
+      STARS_WEIGHT * exponentialCdf(input.stars / STARS_MEDIAN) +
+      FOLLOWERS_WEIGHT * exponentialCdf(input.followers / FOLLOWERS_MEDIAN)) /
       TOTAL_WEIGHT
 
   const percentile = rank * 100
@@ -122,8 +128,9 @@ export const fetchStats = async (
   let totalStars = 0
   let after: string | null = null
   let user: StatsResponse['user'] | null = null
+  let truncated = false
 
-  for (let page = 0; page < 10; page++) {
+  for (let page = 0; page < MAX_REPO_PAGES; page++) {
     const data: StatsResponse = await graphqlRequest<StatsResponse>(
       STATS_QUERY,
       { login: username, after },
@@ -138,10 +145,15 @@ export const fetchStats = async (
     }
     if (!data.user.repositories.pageInfo.hasNextPage) break
     after = data.user.repositories.pageInfo.endCursor
+    if (page === MAX_REPO_PAGES - 1) truncated = true
   }
 
   if (!user) {
     throw new Error(`User not found: ${username}`)
+  }
+
+  if (truncated) {
+    console.warn(`Star aggregation truncated at ${MAX_REPO_PAGES * 100} repos for user ${username}`)
   }
 
   const totalCommits =
@@ -175,4 +187,4 @@ export const fetchStats = async (
   }
 }
 
-export const __test = { calculateRank, exponentialCdf, logNormalCdf }
+export const __test = { calculateRank, exponentialCdf }

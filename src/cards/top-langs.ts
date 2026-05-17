@@ -1,26 +1,12 @@
 import type { LanguageEntry } from '~/fetchers/top-langs'
 import type { Theme } from '~/themes'
+import { escapeXml } from '~/utils/svg'
 
 export type TopLangsCardOptions = {
   hideBorder: boolean
   hideTitle: boolean
+  username: string
 }
-
-const escapeXml = (s: string): string =>
-  s.replace(/[&<>"']/g, (c) => {
-    switch (c) {
-      case '&':
-        return '&amp;'
-      case '<':
-        return '&lt;'
-      case '>':
-        return '&gt;'
-      case '"':
-        return '&quot;'
-      default:
-        return '&#39;'
-    }
-  })
 
 const stripHash = (color: string): string => (color.startsWith('#') ? color.slice(1) : color)
 
@@ -94,7 +80,10 @@ export const renderTopLangsCard = (languages: LanguageEntry[], theme: Theme, opt
     viewBox="0 0 ${width} ${totalHeight}"
     fill="none"
     role="img"
+    aria-labelledby="titleId descId"
   >
+    <title id="titleId">Most Used Languages for ${escapeXml(options.username)}</title>
+    <desc id="descId">${langs.map((l) => `${escapeXml(l.name)} ${l.percent.toFixed(2)}%`).join(', ')}</desc>
     <style>
       .header {
         font: 600 18px 'Segoe UI', Ubuntu, Sans-Serif;

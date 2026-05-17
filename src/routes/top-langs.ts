@@ -51,6 +51,7 @@ topLangsRoute.get('/', async (c) => {
     const svg = renderTopLangsCard(languages, theme, {
       hideBorder: parseBoolParam(c.req.query('hide_border'), false),
       hideTitle: parseBoolParam(c.req.query('hide_title'), false),
+      username,
     })
     return svgResponse(c, svg, cacheSeconds)
   } catch (err) {

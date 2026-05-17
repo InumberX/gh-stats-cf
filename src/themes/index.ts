@@ -64,7 +64,8 @@ export const resolveTheme = (name?: string | null): Theme => {
   return themes.default
 }
 
-const hexPattern = /^#?[0-9a-fA-F]{3,8}$/
+// CSS hex colors are exactly 3, 4, 6, or 8 hex digits.
+const hexPattern = /^#?(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
 
 export const normalizeColor = (raw: string | undefined, fallback: string): string => {
   if (!raw) return fallback
