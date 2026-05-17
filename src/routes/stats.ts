@@ -28,7 +28,11 @@ const STATS_QUERY_KEYS = {
 
 export const statsRoute = new Hono<AppEnv>()
 
-statsRoute.use('*', edgeCache({ allowedQueryKeys: STATS_QUERY_KEYS }))
+// Scope to the sub-app's root path only. With `use('*', ...)`, the
+// middleware would also run for `/api/top-langs` (which mounts at `/api`'s
+// parent path), letting this route's allow-list strip top-langs-only keys
+// like `langs_count` and serve the wrong cached SVG to top-langs callers.
+statsRoute.use('/', edgeCache({ allowedQueryKeys: STATS_QUERY_KEYS }))
 
 statsRoute.get('/', async (c) => {
   const env = c.env

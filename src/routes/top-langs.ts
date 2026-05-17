@@ -28,7 +28,8 @@ const TOP_LANGS_QUERY_KEYS = {
 
 export const topLangsRoute = new Hono<AppEnv>()
 
-topLangsRoute.use('*', edgeCache({ allowedQueryKeys: TOP_LANGS_QUERY_KEYS }))
+// Scope to the sub-app's root only — see the same comment in routes/stats.ts.
+topLangsRoute.use('/', edgeCache({ allowedQueryKeys: TOP_LANGS_QUERY_KEYS }))
 
 topLangsRoute.get('/', async (c) => {
   const env = c.env

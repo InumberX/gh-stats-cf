@@ -79,6 +79,14 @@ export const graphqlRequest = async <T>(
       continue
     }
 
+    // GitHub also uses HTTP 429 (in addition to 403 with rate-limit headers)
+    // for primary / secondary rate limiting. Treat it as RATE_LIMITED and
+    // rotate so callers do not see a misleading BAD_RESPONSE.
+    if (res.status === 429) {
+      lastError = createGitHubError('GitHub API rate limit exceeded (429)', 429, 'RATE_LIMITED')
+      continue
+    }
+
     if (!res.ok) {
       lastError = createGitHubError(`GitHub API returned ${res.status}`, res.status, 'BAD_RESPONSE')
       continue

@@ -110,6 +110,24 @@ describe('graphqlRequest', () => {
     expect(err.status).toBe(429)
   })
 
+  it('classifies HTTP 429 as RATE_LIMITED and rotates to the next PAT', async () => {
+    fetchMock.mockResolvedValueOnce(errorResponse(429))
+    fetchMock.mockResolvedValueOnce(jsonResponse({ data: { ok: true } }))
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    const result = await graphqlRequest<{ ok: boolean }>('q', {}, ['a', 'b'])
+    expect(result).toEqual({ ok: true })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('reports RATE_LIMITED after every PAT returns HTTP 429', async () => {
+    fetchMock.mockImplementation(() => Promise.resolve(errorResponse(429)))
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    const err = (await graphqlRequest('q', {}, ['a', 'b']).catch((e) => e)) as GitHubError
+    expect(err.kind).toBe('RATE_LIMITED')
+    expect(err.status).toBe(429)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
   it('classifies a 403 with abuse-detection wording in body as RATE_LIMITED', async () => {
     fetchMock.mockImplementation(() =>
       Promise.resolve(
