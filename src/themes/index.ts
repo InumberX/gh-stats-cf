@@ -62,7 +62,12 @@ export const isThemeName = (name: string): name is ThemeName => {
 }
 
 export const resolveTheme = (name?: string | null): Theme => {
-  if (name && isThemeName(name)) return themes[name]
+  // Trim so the cache-key normalizer (which trims) and this handler-side
+  // resolver agree on inputs like `?theme=%20radical%20` — otherwise the
+  // cache key collapses to `radical` while the handler renders `default`,
+  // poisoning the cache for later valid requests.
+  const trimmed = name?.trim()
+  if (trimmed && isThemeName(trimmed)) return themes[trimmed]
   return themes.default
 }
 

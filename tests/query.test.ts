@@ -19,6 +19,11 @@ describe('parseBoolParam', () => {
   it('falls back on garbage', () => {
     expect(parseBoolParam('maybe', true)).toBe(true)
   })
+  it('trims surrounding whitespace so encoded space inputs stay consistent with the cache key', () => {
+    expect(parseBoolParam(' true ', false)).toBe(true)
+    expect(parseBoolParam('\tfalse\n', true)).toBe(false)
+    expect(parseBoolParam('  YES  ', false)).toBe(true)
+  })
 })
 
 describe('parseIntParam', () => {

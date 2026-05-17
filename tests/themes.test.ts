@@ -25,6 +25,13 @@ describe('themes', () => {
     expect(resolveTheme('radical')).toEqual(themes.radical)
   })
 
+  it('resolveTheme trims surrounding whitespace so cache key and handler agree', () => {
+    // Otherwise `?theme=%20radical%20` would render the default but be cached
+    // under the canonical `theme=radical` key, poisoning later requests.
+    expect(resolveTheme(' radical ')).toEqual(themes.radical)
+    expect(resolveTheme('\ttokyonight\n')).toEqual(themes.tokyonight)
+  })
+
   it('normalizeColor accepts only valid 3/4/6/8-digit hex and falls back otherwise', () => {
     expect(normalizeColor('#FF0000', '000')).toBe('FF0000')
     expect(normalizeColor('aabbcc', '000')).toBe('aabbcc')

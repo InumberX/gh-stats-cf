@@ -1,6 +1,10 @@
 export const parseBoolParam = (raw: string | undefined, fallback: boolean): boolean => {
   if (raw === undefined) return fallback
-  const v = raw.toLowerCase()
+  // Trim so the cache-key normalizer (which trims) and this handler-side
+  // parser agree on inputs like `?show_icons=%20true%20` — otherwise the
+  // cache key collapses to `true` while the handler renders the fallback,
+  // poisoning the cache for later valid requests.
+  const v = raw.trim().toLowerCase()
   if (v === 'true' || v === '1' || v === 'yes') return true
   if (v === 'false' || v === '0' || v === 'no') return false
   return fallback

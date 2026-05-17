@@ -114,6 +114,22 @@ describe('canonicalCacheKey', () => {
     expect(low).toBe(min)
   })
 
+  it('does not allow whitespace-padded values to poison the cache (bool)', () => {
+    // `?show_icons=%20true%20` must collapse to the same cache key as
+    // `?show_icons=true`, AND the handler-side parseBoolParam must agree
+    // (both trim). Otherwise a padded request can be cached and later
+    // served for clean requests with a different effective value.
+    const padded = canonicalCacheKey('https://example.com/api?show_icons=%20true%20', STATS_KEYS)
+    const clean = canonicalCacheKey('https://example.com/api?show_icons=true', STATS_KEYS)
+    expect(padded).toBe(clean)
+  })
+
+  it('does not allow whitespace-padded values to poison the cache (theme)', () => {
+    const padded = canonicalCacheKey('https://example.com/api?theme=%20radical%20', STATS_KEYS)
+    const clean = canonicalCacheKey('https://example.com/api?theme=radical', STATS_KEYS)
+    expect(padded).toBe(clean)
+  })
+
   it('canonicalizes exclude_langs (case + ordering + duplicates)', () => {
     const a = canonicalCacheKey('https://example.com/api/top-langs?exclude_langs=Go,Rust', TOP_LANGS_KEYS)
     const b = canonicalCacheKey('https://example.com/api/top-langs?exclude_langs=rust,go', TOP_LANGS_KEYS)
