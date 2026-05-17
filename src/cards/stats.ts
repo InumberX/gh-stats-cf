@@ -35,20 +35,25 @@ const ROWS = (stats: Stats): Row[] => [
   { label: 'Contributed to (last year):', value: stats.contributedTo, icon: 'contrib' },
 ]
 
+// Rank circle layout
+const RANK_R = 40
+const RANK_CX = 445
+const RANK_CY = 95
+
 const rankCircle = (percentile: number, color: string): string => {
-  const CIRCUMFERENCE = 2 * Math.PI * 40
+  const circumference = 2 * Math.PI * RANK_R
   const progress = Math.max(0, Math.min(100, percentile)) / 100
-  const offset = CIRCUMFERENCE * (1 - progress)
+  const offset = circumference * (1 - progress)
   return `
-    <g transform="translate(${405}, ${47.5})">
-      <circle cx="40" cy="40" r="40" fill="none" stroke="#${color}33" stroke-width="6"/>
+    <g transform="translate(${RANK_CX - RANK_R}, ${RANK_CY - RANK_R})">
+      <circle cx="${RANK_R}" cy="${RANK_R}" r="${RANK_R}" fill="none" stroke="#${color}33" stroke-width="6"/>
       <circle
-        cx="40" cy="40" r="40"
+        cx="${RANK_R}" cy="${RANK_R}" r="${RANK_R}"
         fill="none" stroke="#${color}" stroke-width="6"
         stroke-linecap="round"
-        stroke-dasharray="${CIRCUMFERENCE.toFixed(2)}"
+        stroke-dasharray="${circumference.toFixed(2)}"
         stroke-dashoffset="${offset.toFixed(2)}"
-        transform="rotate(-90 40 40)"
+        transform="rotate(-90 ${RANK_R} ${RANK_R})"
       />
     </g>
   `
@@ -56,42 +61,46 @@ const rankCircle = (percentile: number, color: string): string => {
 
 export const renderStatsCard = (stats: Stats, theme: Theme, options: StatsCardOptions): string => {
   const width = 495
-  const height = 195
+  const padding = 25
+  const rowHeight = 25
+  const rowsTop = options.hideTitle ? 35 : 55
+  const labelX = padding + (options.showIcons ? 25 : 0)
+  const valueEndX = 340 // right-aligned end position for value text
   const rows = ROWS(stats)
-  const rankVisible = !options.hideRank
-  const labelX = options.showIcons ? 25 + 24 : 25
-  const valueX = options.showIcons ? 220 : 195
 
   const rowEls = rows
     .map((row, i) => {
-      const y = i * 25
-      const icon = options.showIcons ? renderIcon(row.icon, theme.icon_color) : ''
-      const iconG = options.showIcons ? `<g transform="translate(0, ${y - 12})">${icon}</g>` : ''
+      const y = i * rowHeight
+      const iconEl = options.showIcons
+        ? `<g transform="translate(${padding}, ${y - 12})">${renderIcon(row.icon, theme.icon_color)}</g>`
+        : ''
       return `
-        <g transform="translate(0, ${y})" class="stat-row" style="animation-delay: ${150 + i * 150}ms">
-          ${iconG}
-          <text class="stat" x="${labelX}" y="0">${escapeXml(row.label)}</text>
-          <text class="stat-value" x="${valueX}" y="0">${row.value.toLocaleString('en-US')}</text>
+        <g class="stat-row" style="animation-delay: ${150 + i * 150}ms">
+          ${iconEl}
+          <text class="stat" x="${labelX}" y="${y}">${escapeXml(row.label)}</text>
+          <text class="stat-value" x="${valueEndX}" y="${y}">${row.value.toLocaleString('en-US')}</text>
         </g>
       `
     })
     .join('')
 
-  const rankBlock = rankVisible
-    ? `
+  const contentHeight = rows.length * rowHeight
+  const minHeight = options.hideRank ? rowsTop + contentHeight + 20 : Math.max(rowsTop + contentHeight + 20, 195)
+  const height = minHeight
+
+  const titleText = options.hideTitle ? '' : `${escapeXml(stats.name)}'s GitHub Stats`
+  const titleEl = options.hideTitle ? '' : `<text x="${padding}" y="35" class="header">${titleText}</text>`
+
+  const rankBlock = options.hideRank
+    ? ''
+    : `
       ${rankCircle(stats.rank.percentile, theme.title_color)}
-      <text x="${405 + 40}" y="${47.5 + 47}" text-anchor="middle" class="rank-letter">${escapeXml(
+      <text x="${RANK_CX}" y="${RANK_CY}" text-anchor="middle" dominant-baseline="central" class="rank-letter">${escapeXml(
         stats.rank.level
       )}</text>
     `
-    : ''
-
-  const titleText = options.hideTitle ? '' : `${escapeXml(stats.name)}'s GitHub Stats`
-
-  const titleEl = options.hideTitle ? '' : `<text x="25" y="35" class="header">${titleText}</text>`
 
   const borderStroke = options.hideBorder ? 'none' : `#${theme.border_color}`
-  const contentStartY = options.hideTitle ? 35 : 55
 
   return `<svg
     xmlns="http://www.w3.org/2000/svg"
@@ -100,7 +109,7 @@ export const renderStatsCard = (stats: Stats, theme: Theme, options: StatsCardOp
     viewBox="0 0 ${width} ${height}"
     fill="none"
     role="img"
-    aria-labelledby="descId"
+    aria-labelledby="titleId descId"
   >
     <title id="titleId">${escapeXml(titleText || `${stats.login} GitHub Stats`)}</title>
     <desc id="descId">GitHub stats card for ${escapeXml(stats.login)}</desc>
@@ -135,7 +144,7 @@ export const renderStatsCard = (stats: Stats, theme: Theme, options: StatsCardOp
       stroke="${borderStroke}"
     />
     ${titleEl}
-    <g transform="translate(25, ${contentStartY + 20})">
+    <g transform="translate(0, ${rowsTop + 20})">
       ${rowEls}
     </g>
     ${rankBlock}
