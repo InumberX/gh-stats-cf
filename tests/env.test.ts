@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { cacheTtlSeconds, collectPats, isAllowedUser } from '~/env'
+import { cacheTtlSeconds, collectPats, getOwnerUsername } from '~/env'
 
 describe('collectPats', () => {
   it('collects defined PATs in order', () => {
@@ -11,15 +11,18 @@ describe('collectPats', () => {
   })
 })
 
-describe('isAllowedUser', () => {
-  it('allows everyone when WHITELIST is unset', () => {
-    expect(isAllowedUser({}, 'anyone')).toBe(true)
+describe('getOwnerUsername', () => {
+  it('returns the trimmed username when valid', () => {
+    expect(getOwnerUsername({ GITHUB_USERNAME: '  InumberX ' })).toBe('InumberX')
   })
-  it('matches case-insensitively', () => {
-    expect(isAllowedUser({ WHITELIST: 'InumberX, octocat' }, 'inumberx')).toBe(true)
+  it('returns null when unset or empty', () => {
+    expect(getOwnerUsername({})).toBeNull()
+    expect(getOwnerUsername({ GITHUB_USERNAME: '' })).toBeNull()
+    expect(getOwnerUsername({ GITHUB_USERNAME: '   ' })).toBeNull()
   })
-  it('rejects users not in WHITELIST', () => {
-    expect(isAllowedUser({ WHITELIST: 'inumberx' }, 'other')).toBe(false)
+  it('returns null when the username fails GitHub login rules', () => {
+    expect(getOwnerUsername({ GITHUB_USERNAME: '-bad' })).toBeNull()
+    expect(getOwnerUsername({ GITHUB_USERNAME: 'has space' })).toBeNull()
   })
 })
 

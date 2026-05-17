@@ -17,39 +17,47 @@ type CountsResponse = {
     login: string
     contributionsCollection: {
       totalCommitContributions: number
-      totalPullRequestReviewContributions: number
-      restrictedContributionsCount: number
     }
     repositoriesContributedTo: { totalCount: number }
     followers: { totalCount: number }
   } | null
   publicPRs: { issueCount: number }
   publicIssues: { issueCount: number }
+  publicReviews: { issueCount: number }
 }
 
 type StarsResponse = {
   user: {
     repositories: {
-      totalCount: number
       nodes: { stargazerCount: number }[]
       pageInfo: { hasNextPage: boolean; endCursor: string | null }
     }
   } | null
 }
 
-// Counts query — fetched once per request. PR/Issue counts go through the
-// Search API with `is:public` so private repo activity never leaks into the
-// public stats card. `repositoriesContributedTo` accepts `privacy: PUBLIC`
-// directly.
+// Counts query — fetched once per request. PR / issue / review counts all go
+// through the Search API with `is:public` so private repo activity does not
+// leak into the public stats card. `repositoriesContributedTo` accepts
+// `privacy: PUBLIC` directly.
+//
+// `totalCommitContributions` does NOT have a server-side public-only filter,
+// and when the configured PAT belongs to the user being displayed (the
+// expected setup for this single-user worker) it includes that user's own
+// private commits within the contribution window. This is documented in the
+// README; we surface the field as-is to keep the commits-in-the-last-year
+// figure useful for the worker's owner.
 const COUNTS_QUERY = `
-  query userCounts($login: String!, $publicPrQuery: String!, $publicIssueQuery: String!) {
+  query userCounts(
+    $login: String!
+    $publicPrQuery: String!
+    $publicIssueQuery: String!
+    $publicReviewQuery: String!
+  ) {
     user(login: $login) {
       name
       login
       contributionsCollection {
         totalCommitContributions
-        totalPullRequestReviewContributions
-        restrictedContributionsCount
       }
       repositoriesContributedTo(
         first: 1
@@ -60,6 +68,7 @@ const COUNTS_QUERY = `
     }
     publicPRs: search(query: $publicPrQuery, type: ISSUE, first: 1) { issueCount }
     publicIssues: search(query: $publicIssueQuery, type: ISSUE, first: 1) { issueCount }
+    publicReviews: search(query: $publicReviewQuery, type: ISSUE, first: 1) { issueCount }
   }
 `
 
@@ -75,7 +84,6 @@ const STARS_QUERY = `
         privacy: PUBLIC
         orderBy: { direction: DESC, field: STARGAZERS }
       ) {
-        totalCount
         nodes { stargazerCount }
         pageInfo { hasNextPage endCursor }
       }
@@ -97,9 +105,8 @@ const calculateRank = (input: {
   reviews: number
   stars: number
   followers: number
-  includeAllCommits: boolean
 }): { level: string; percentile: number } => {
-  const COMMITS_MEDIAN = input.includeAllCommits ? 1000 : 250
+  const COMMITS_MEDIAN = 250
   const COMMITS_WEIGHT = 2
   const PRS_MEDIAN = 50
   const PRS_WEIGHT = 3
@@ -135,10 +142,7 @@ const calculateRank = (input: {
   return { level, percentile }
 }
 
-export const fetchStats = async (
-  username: string,
-  options: { pats: string[]; countPrivate: boolean }
-): Promise<Stats> => {
+export const fetchStats = async (username: string, options: { pats: string[] }): Promise<Stats> => {
   // 1. Counts (one-shot). Username is validated upstream to be alphanumeric +
   //    hyphen only (see isValidUsername), so embedding it into a search query
   //    string is safe.
@@ -146,8 +150,9 @@ export const fetchStats = async (
     COUNTS_QUERY,
     {
       login: username,
-      publicPrQuery: `is:pr author:${username} is:public archived:false`,
-      publicIssueQuery: `is:issue author:${username} is:public archived:false`,
+      publicPrQuery: `is:pr author:${username} is:public`,
+      publicIssueQuery: `is:issue author:${username} is:public`,
+      publicReviewQuery: `is:pr reviewed-by:${username} is:public`,
     },
     options.pats
   )
@@ -179,12 +184,10 @@ export const fetchStats = async (
     console.warn(`Star aggregation truncated at ${MAX_REPO_PAGES * 100} repos for user ${username}`)
   }
 
-  const totalCommits =
-    counts.user.contributionsCollection.totalCommitContributions +
-    (options.countPrivate ? counts.user.contributionsCollection.restrictedContributionsCount : 0)
+  const totalCommits = counts.user.contributionsCollection.totalCommitContributions
   const totalPRs = counts.publicPRs.issueCount
   const totalIssues = counts.publicIssues.issueCount
-  const reviews = counts.user.contributionsCollection.totalPullRequestReviewContributions
+  const reviews = counts.publicReviews.issueCount
   const contributedTo = counts.user.repositoriesContributedTo.totalCount
   const followers = counts.user.followers.totalCount
 
@@ -195,7 +198,6 @@ export const fetchStats = async (
     reviews,
     stars: totalStars,
     followers,
-    includeAllCommits: options.countPrivate,
   })
 
   return {

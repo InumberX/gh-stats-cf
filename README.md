@@ -9,7 +9,7 @@ Heavily inspired by [`anuraghazra/github-readme-stats`](https://github.com/anura
 - ⚡ Runs on the Cloudflare Workers free plan
 - 🎨 Six built-in themes: `default`, `dark`, `radical`, `merko`, `gruvbox`, `tokyonight`
 - 🖼️ Two endpoints: `/api` (stats card) and `/api/top-langs`
-- 🔒 Optional `WHITELIST` to restrict your instance to specific usernames
+- 🔒 Single-user by design — the served GitHub login is fixed via the `GITHUB_USERNAME` env var, not a query parameter
 - 🔁 Multi-PAT rotation (`PAT_1` … `PAT_5`)
 - 🧪 Vitest test suite
 - 📦 Zero runtime dependencies besides Hono
@@ -22,7 +22,7 @@ Heavily inspired by [`anuraghazra/github-readme-stats`](https://github.com/anura
 
 ### 2. Create a GitHub Personal Access Token
 
-A PAT is required for two reasons: it lifts the GitHub API rate limit from 60/h to 5000/h per token, and it lets you see your **own private contribution count** when `count_private=true`.
+A PAT is required to lift the GitHub API rate limit from 60/h to 5000/h per token. When the PAT belongs to the configured `GITHUB_USERNAME` it additionally lets the **Commits (last year)** number include that user's own private commits in the contribution window (GitHub provides no public-only commit count).
 
 Recommended: a [fine-grained PAT](https://github.com/settings/personal-access-tokens/new) with these permissions:
 
@@ -36,16 +36,19 @@ Recommended: a [fine-grained PAT](https://github.com/settings/personal-access-to
 ```bash
 npm install
 cp .dev.vars.example .dev.vars
-# then edit .dev.vars and set PAT_1=ghp_xxx
+# then edit .dev.vars and set GITHUB_USERNAME=your-login and PAT_1=ghp_xxx
 ```
 
-Edit `wrangler.jsonc` and change `name` to your own Worker name (e.g. `gh-stats-yourname`).
+Edit `wrangler.jsonc`:
+
+- Change `name` to your own Worker name (e.g. `gh-stats-yourname`).
+- Uncomment the `vars` block and set `GITHUB_USERNAME` to your GitHub login. This is **required** — without it the worker returns an error card.
 
 ### 4. Run locally
 
 ```bash
 npm run dev
-# open http://localhost:8787/api?username=octocat&theme=radical
+# open http://localhost:8787/api?theme=radical
 ```
 
 ### 5. Deploy
@@ -58,17 +61,17 @@ npx wrangler secret put PAT_1
 npm run deploy
 ```
 
-Your cards will be available at `https://<worker-name>.<your-subdomain>.workers.dev/api?username=...`.
+Your cards will be available at `https://<worker-name>.<your-subdomain>.workers.dev/api`.
 
 ## API
+
+> The served GitHub login is fixed by the `GITHUB_USERNAME` env var, so it is **not** a query parameter on either endpoint.
 
 ### `GET /api` — stats card
 
 | Param            | Type    | Default   | Description |
 | ---------------- | ------- | --------- | --- |
-| `username`       | string  | (required)| GitHub login |
 | `theme`          | string  | `default` | One of: `default`, `dark`, `radical`, `merko`, `gruvbox`, `tokyonight` |
-| `count_private`  | bool    | `false`   | Include your private *commit* count (requires your own PAT). Private repo stars/languages are never exposed. |
 | `show_icons`     | bool    | `false`   | Show row icons |
 | `hide_rank`      | bool    | `false`   | Hide the rank circle |
 | `hide_border`    | bool    | `false`   | Hide the card border |
@@ -83,18 +86,17 @@ Your cards will be available at `https://<worker-name>.<your-subdomain>.workers.
 
 | Param           | Type   | Default | Description |
 | --------------- | ------ | ------- | --- |
-| `username`      | string | (req)   | GitHub login |
 | `theme`         | string | `default` | Same set as above |
-| `langs_count`   | int    | `5`     | Number of languages to show |
+| `langs_count`   | int    | `5`     | Number of languages to show (clamped to 1–20) |
 | `exclude_langs` | csv    | (none)  | Comma-separated language names to exclude |
 | `hide_border`   | bool   | `false` | Hide the card border |
 | `hide_title`    | bool   | `false` | Hide the header title |
 
 Color overrides (`title_color`, `text_color`, `bg_color`, `border_color`) work here too.
 
-> **Privacy note:** stars, languages, and ranking are aggregated **only from public repositories** even when the configured PAT could see private ones. Only the optional `count_private` flag opts the *owner themself* into adding their own private commit count to the displayed total.
+> **Privacy note:** stars, languages, PR, issue, and review counts are aggregated **only from public repositories** even when the configured PAT could see private ones. The one exception is **Commits (last year)**: GitHub does not expose a public-only commit count, so when the PAT belongs to `GITHUB_USERNAME` (the expected setup) this number includes the configured user's own private commits within the contribution window. This is not a leak — it is the configured user's own data being shown on their own card.
 >
-> **Scope note:** "Commits (last year)" reflects GitHub's contribution window (rolling 365 days), not an all-time total. Repository pagination is capped at 10,000 repos per request — accounts beyond that are rare but will be truncated with a log warning.
+> **Scope note:** "Commits (last year)" reflects GitHub's contribution window (rolling 365 days), not an all-time total. PR/Issue/Review counts are all-time public totals (archived repos included). Repository pagination is capped at 10,000 repos per request — accounts beyond that are rare but will be truncated with a log warning.
 
 ## Caching
 
@@ -113,10 +115,10 @@ Set via `wrangler secret put` (recommended for tokens) or in `wrangler.jsonc` `v
 
 | Name              | Type   | Default | Notes |
 | ----------------- | ------ | ------- | --- |
+| `GITHUB_USERNAME` | var    | —       | **Required.** The GitHub login this worker serves stats for. |
 | `PAT_1`           | secret | —       | **Required.** GitHub PAT. |
 | `PAT_2` … `PAT_5` | secret | —       | Optional rotation slots. |
 | `CACHE_SECONDS`   | var    | `86400` | SVG `Cache-Control` max-age (default: 1 day). |
-| `WHITELIST`       | var    | —       | Comma-separated GitHub logins allowed to query this instance. Empty means anyone. |
 
 ## Themes
 
@@ -128,7 +130,7 @@ merko        gruvbox      tokyonight
 To preview against your data, just swap the URL:
 
 ```
-https://<your-worker>/api?username=octocat&theme=tokyonight
+https://<your-worker>/api?theme=tokyonight
 ```
 
 ## Development

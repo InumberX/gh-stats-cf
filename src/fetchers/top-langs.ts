@@ -34,7 +34,7 @@ const TOP_LANGS_QUERY = `
         orderBy: { direction: DESC, field: STARGAZERS }
       ) {
         nodes {
-          languages(first: 10, orderBy: { direction: DESC, field: SIZE }) {
+          languages(first: 50, orderBy: { direction: DESC, field: SIZE }) {
             edges {
               size
               node { name color }

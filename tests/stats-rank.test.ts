@@ -11,7 +11,6 @@ describe('rank calculation', () => {
       reviews: 0,
       stars: 0,
       followers: 0,
-      includeAllCommits: false,
     })
     expect(r.level).toBe('C')
   })
@@ -24,7 +23,6 @@ describe('rank calculation', () => {
       reviews: 500,
       stars: 100_000,
       followers: 50_000,
-      includeAllCommits: true,
     })
     expect(['S', 'A+']).toContain(r.level)
   })

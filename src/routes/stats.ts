@@ -3,11 +3,11 @@ import { Hono } from 'hono'
 import { renderErrorCard } from '~/cards/error'
 import { renderStatsCard } from '~/cards/stats'
 import type { AppEnv } from '~/env'
-import { cacheTtlSeconds, collectPats, isAllowedUser } from '~/env'
+import { cacheTtlSeconds, collectPats, getOwnerUsername } from '~/env'
 import { fetchStats } from '~/fetchers/stats'
 import { buildTheme } from '~/themes'
 import { edgeCache } from '~/utils/edge-cache'
-import { isValidUsername, parseBoolParam } from '~/utils/query'
+import { parseBoolParam } from '~/utils/query'
 import { svgResponse } from '~/utils/svg-response'
 
 export const statsRoute = new Hono<AppEnv>()
@@ -26,12 +26,9 @@ statsRoute.get('/', async (c) => {
     border_color: c.req.query('border_color'),
   })
 
-  const username = c.req.query('username')
-  if (!username || !isValidUsername(username)) {
-    return svgResponse(c, renderErrorCard('Invalid or missing `username` parameter.', theme), 60)
-  }
-  if (!isAllowedUser(env, username)) {
-    return svgResponse(c, renderErrorCard('Username not allowed on this instance.', theme), 60)
+  const username = getOwnerUsername(env)
+  if (!username) {
+    return svgResponse(c, renderErrorCard('Server is missing or has an invalid `GITHUB_USERNAME`.', theme), 60)
   }
 
   const pats = collectPats(env)
@@ -40,10 +37,7 @@ statsRoute.get('/', async (c) => {
   }
 
   try {
-    const stats = await fetchStats(username, {
-      pats,
-      countPrivate: parseBoolParam(c.req.query('count_private'), false),
-    })
+    const stats = await fetchStats(username, { pats })
     const svg = renderStatsCard(stats, theme, {
       showIcons: parseBoolParam(c.req.query('show_icons'), false),
       hideRank: parseBoolParam(c.req.query('hide_rank'), false),

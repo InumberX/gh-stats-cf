@@ -1,3 +1,5 @@
+import { isValidUsername } from '~/utils/query'
+
 export type AppEnv = {
   Bindings: {
     PAT_1?: string
@@ -6,7 +8,7 @@ export type AppEnv = {
     PAT_4?: string
     PAT_5?: string
     CACHE_SECONDS?: string
-    WHITELIST?: string
+    GITHUB_USERNAME?: string
   }
 }
 
@@ -16,13 +18,13 @@ export const collectPats = (env: AppEnv['Bindings']): string[] => {
   )
 }
 
-export const isAllowedUser = (env: AppEnv['Bindings'], username: string): boolean => {
-  if (!env.WHITELIST) return true
-  const allowed = env.WHITELIST.split(',')
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean)
-  if (allowed.length === 0) return true
-  return allowed.includes(username.toLowerCase())
+// `GITHUB_USERNAME` fixes the worker to a single GitHub account. Returning
+// `null` (rather than throwing here) lets the route render an SVG error card
+// instead of crashing the request.
+export const getOwnerUsername = (env: AppEnv['Bindings']): string | null => {
+  const raw = env.GITHUB_USERNAME?.trim()
+  if (!raw) return null
+  return isValidUsername(raw) ? raw : null
 }
 
 export const cacheTtlSeconds = (env: AppEnv['Bindings']): number => {

@@ -1,6 +1,10 @@
 # Copy to .dev.vars for local development with `wrangler dev`.
 # Never commit .dev.vars — it is gitignored.
 
+# Required: GitHub login this worker serves stats for. This worker is
+# single-user — there is no `username` query parameter at runtime.
+GITHUB_USERNAME=your-github-login
+
 # GitHub Personal Access Token(s). At least PAT_1 is required.
 # Fine-grained recommended. Scopes: Repository Contents (Read), Metadata (Read).
 PAT_1=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -9,7 +13,3 @@ PAT_1=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # Optional: SVG cache TTL in seconds (default: 86400 = 1 day)
 # CACHE_SECONDS=86400
-
-# Optional: comma-separated GitHub logins allowed to query this instance.
-# Leave empty to allow any username.
-# WHITELIST=your-github-login

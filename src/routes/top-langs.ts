@@ -3,11 +3,11 @@ import { Hono } from 'hono'
 import { renderErrorCard } from '~/cards/error'
 import { renderTopLangsCard } from '~/cards/top-langs'
 import type { AppEnv } from '~/env'
-import { cacheTtlSeconds, collectPats, isAllowedUser } from '~/env'
+import { cacheTtlSeconds, collectPats, getOwnerUsername } from '~/env'
 import { fetchTopLangs } from '~/fetchers/top-langs'
 import { buildTheme } from '~/themes'
 import { edgeCache } from '~/utils/edge-cache'
-import { isValidUsername, parseBoolParam, parseIntParam, parseListParam } from '~/utils/query'
+import { parseBoolParam, parseIntParam, parseListParam } from '~/utils/query'
 import { svgResponse } from '~/utils/svg-response'
 
 export const topLangsRoute = new Hono<AppEnv>()
@@ -26,12 +26,9 @@ topLangsRoute.get('/', async (c) => {
     border_color: c.req.query('border_color'),
   })
 
-  const username = c.req.query('username')
-  if (!username || !isValidUsername(username)) {
-    return svgResponse(c, renderErrorCard('Invalid or missing `username` parameter.', theme), 60)
-  }
-  if (!isAllowedUser(env, username)) {
-    return svgResponse(c, renderErrorCard('Username not allowed on this instance.', theme), 60)
+  const username = getOwnerUsername(env)
+  if (!username) {
+    return svgResponse(c, renderErrorCard('Server is missing or has an invalid `GITHUB_USERNAME`.', theme), 60)
   }
 
   const pats = collectPats(env)

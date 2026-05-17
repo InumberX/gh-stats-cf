@@ -11,11 +11,13 @@
   // Set runtime secrets via `wrangler secret put`:
   //   wrangler secret put PAT_1
   //
-  // Optional vars (uncomment the block below to enable). The leading `,` on
-  // the first uncommented line becomes the property separator after the
-  // `observability` block above, so this block can be uncommented as-is.
+  // `GITHUB_USERNAME` is REQUIRED — this worker is single-user and serves
+  // stats for that one account. Set it together with any optional vars. The
+  // leading `,` on the first uncommented line becomes the property separator
+  // after the `observability` block above, so this block can be uncommented
+  // as-is.
   // ,"vars": {
-  //   "CACHE_SECONDS": "86400",
-  //   "WHITELIST": "your-github-login"
+  //   "GITHUB_USERNAME": "your-github-login",
+  //   "CACHE_SECONDS": "86400"
   // }
 }
