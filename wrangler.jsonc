@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Change `name` to your own Worker name before deploying.
+  "name": "gh-stats-cf",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-05-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  }
+  // Set runtime secrets via `wrangler secret put`:
+  //   wrangler secret put PAT_1
+  //
+  // Optional vars (uncomment and adjust):
+  // "vars": {
+  //   "CACHE_SECONDS": "1800",
+  //   "WHITELIST": "your-github-login"
+  // }
+}
