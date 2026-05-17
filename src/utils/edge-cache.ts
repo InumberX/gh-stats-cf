@@ -38,7 +38,13 @@ const intNormalize =
   (raw) => {
     const trimmed = raw.trim()
     if (!INT_PATTERN.test(trimmed)) return undefined
-    const n = Math.min(max, Math.max(min, Number.parseInt(trimmed, 10)))
+    const parsed = Number.parseInt(trimmed, 10)
+    // For extremely long digit strings `parseInt` returns `Infinity`. The
+    // route-side `parseIntParam` drops those to its fallback, so this
+    // normalizer must do the same — otherwise an oversized input clamps to
+    // `max` here while the handler renders the default, poisoning the cache.
+    if (!Number.isFinite(parsed)) return undefined
+    const n = Math.min(max, Math.max(min, parsed))
     return String(n)
   }
 

@@ -114,6 +114,17 @@ describe('canonicalCacheKey', () => {
     expect(low).toBe(min)
   })
 
+  it('drops langs_count when the digit string is so long parseInt overflows to Infinity', () => {
+    // parseIntParam (handler side) drops non-finite results to its fallback,
+    // so this cache key must do the same — otherwise the oversized request
+    // would be cached under `langs_count=20` and later served for a real
+    // `?langs_count=20` request despite being rendered with the default (5).
+    const huge = '9'.repeat(400)
+    const overflow = canonicalCacheKey(`https://example.com/api/top-langs?langs_count=${huge}`, TOP_LANGS_KEYS)
+    const omitted = canonicalCacheKey('https://example.com/api/top-langs', TOP_LANGS_KEYS)
+    expect(overflow).toBe(omitted)
+  })
+
   it('does not allow whitespace-padded values to poison the cache (bool)', () => {
     // `?show_icons=%20true%20` must collapse to the same cache key as
     // `?show_icons=true`, AND the handler-side parseBoolParam must agree
