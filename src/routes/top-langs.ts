@@ -6,24 +6,25 @@ import type { AppEnv } from '~/env'
 import { cacheTtlSeconds, collectPats, getOwnerUsername } from '~/env'
 import { fetchTopLangs } from '~/fetchers/top-langs'
 import { buildTheme } from '~/themes'
-import { edgeCache } from '~/utils/edge-cache'
+import { cacheNormalizers, edgeCache } from '~/utils/edge-cache'
 import { parseBoolParam, parseIntParam, parseListParam } from '~/utils/query'
 import { svgResponse } from '~/utils/svg-response'
 
-// Query keys the top-langs route actually reads. Anything outside this set is
-// dropped from the edge-cache key (see edgeCache / canonicalCacheKey).
-const TOP_LANGS_QUERY_KEYS: ReadonlySet<string> = new Set([
-  'theme',
-  'title_color',
-  'icon_color',
-  'text_color',
-  'bg_color',
-  'border_color',
-  'langs_count',
-  'exclude_langs',
-  'hide_border',
-  'hide_title',
-])
+// Query keys the top-langs route actually reads, each mapped to the same
+// normalization the handler performs. `icon_color` is intentionally absent —
+// `renderTopLangsCard` does not paint any icons, so varying it must not
+// fragment the cache (see edgeCache / canonicalCacheKey).
+const TOP_LANGS_QUERY_KEYS = {
+  theme: cacheNormalizers.theme,
+  title_color: cacheNormalizers.hex,
+  text_color: cacheNormalizers.hex,
+  bg_color: cacheNormalizers.hex,
+  border_color: cacheNormalizers.hex,
+  langs_count: cacheNormalizers.int(1, 20),
+  exclude_langs: cacheNormalizers.csv,
+  hide_border: cacheNormalizers.bool,
+  hide_title: cacheNormalizers.bool,
+} as const
 
 export const topLangsRoute = new Hono<AppEnv>()
 
@@ -32,10 +33,10 @@ topLangsRoute.use('*', edgeCache({ allowedQueryKeys: TOP_LANGS_QUERY_KEYS }))
 topLangsRoute.get('/', async (c) => {
   const env = c.env
   const cacheSeconds = cacheTtlSeconds(env)
+  // No `icon_color`: the top-langs card does not render any icons.
   const theme = buildTheme({
     theme: c.req.query('theme'),
     title_color: c.req.query('title_color'),
-    icon_color: c.req.query('icon_color'),
     text_color: c.req.query('text_color'),
     bg_color: c.req.query('bg_color'),
     border_color: c.req.query('border_color'),

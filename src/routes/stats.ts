@@ -6,24 +6,25 @@ import type { AppEnv } from '~/env'
 import { cacheTtlSeconds, collectPats, getOwnerUsername } from '~/env'
 import { fetchStats } from '~/fetchers/stats'
 import { buildTheme } from '~/themes'
-import { edgeCache } from '~/utils/edge-cache'
+import { cacheNormalizers, edgeCache } from '~/utils/edge-cache'
 import { parseBoolParam } from '~/utils/query'
 import { svgResponse } from '~/utils/svg-response'
 
-// Query keys the stats route actually reads. Anything outside this set is
-// dropped from the edge-cache key (see edgeCache / canonicalCacheKey).
-const STATS_QUERY_KEYS: ReadonlySet<string> = new Set([
-  'theme',
-  'title_color',
-  'icon_color',
-  'text_color',
-  'bg_color',
-  'border_color',
-  'show_icons',
-  'hide_rank',
-  'hide_border',
-  'hide_title',
-])
+// Query keys the stats route actually reads, each mapped to the same
+// normalization the handler performs. Anything outside this map is dropped
+// from the edge-cache key (see edgeCache / canonicalCacheKey).
+const STATS_QUERY_KEYS = {
+  theme: cacheNormalizers.theme,
+  title_color: cacheNormalizers.hex,
+  icon_color: cacheNormalizers.hex,
+  text_color: cacheNormalizers.hex,
+  bg_color: cacheNormalizers.hex,
+  border_color: cacheNormalizers.hex,
+  show_icons: cacheNormalizers.bool,
+  hide_rank: cacheNormalizers.bool,
+  hide_border: cacheNormalizers.bool,
+  hide_title: cacheNormalizers.bool,
+} as const
 
 export const statsRoute = new Hono<AppEnv>()
 

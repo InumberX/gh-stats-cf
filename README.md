@@ -22,7 +22,7 @@ Heavily inspired by [`anuraghazra/github-readme-stats`](https://github.com/anura
 
 ### 2. Create a GitHub Personal Access Token
 
-A PAT is required to access GitHub's GraphQL API. Authenticated GraphQL traffic is metered as **5,000 points per hour per token** (cost varies per query — connection paging in particular can consume multiple points per request), and additional PAT slots (`PAT_2` … `PAT_5`) extend that budget via rotation. When the PAT belongs to the configured `GITHUB_USERNAME` it additionally lets the **Commits (last year)** number include that user's own private commits in the contribution window (GitHub provides no public-only commit count).
+A PAT is required to access GitHub's GraphQL API. Authenticated GraphQL traffic is metered as **5,000 points per hour per authenticated user** (cost varies per query — connection paging in particular can consume multiple points per request). Multiple PAT slots (`PAT_2` … `PAT_5`) **do not multiply the rate-limit budget when they belong to the same user**; rotation is mainly useful as a fallback for mis-scoped or expired tokens, or to combine tokens from distinct accounts (which itself has private-commit-visibility implications). When the PAT belongs to the configured `GITHUB_USERNAME` it additionally lets the **Commits (last year)** number include that user's own private commits in the contribution window (GitHub provides no public-only commit count).
 
 Recommended: a [fine-grained PAT](https://github.com/settings/personal-access-tokens/new) with these permissions:
 

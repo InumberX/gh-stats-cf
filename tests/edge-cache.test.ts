@@ -1,32 +1,31 @@
 import { describe, expect, it } from 'vitest'
 
-import { canonicalCacheKey } from '~/utils/edge-cache'
+import { cacheNormalizers, canonicalCacheKey } from '~/utils/edge-cache'
 
-const STATS_KEYS: ReadonlySet<string> = new Set([
-  'theme',
-  'title_color',
-  'icon_color',
-  'text_color',
-  'bg_color',
-  'border_color',
-  'show_icons',
-  'hide_rank',
-  'hide_border',
-  'hide_title',
-])
+const STATS_KEYS = {
+  theme: cacheNormalizers.theme,
+  title_color: cacheNormalizers.hex,
+  icon_color: cacheNormalizers.hex,
+  text_color: cacheNormalizers.hex,
+  bg_color: cacheNormalizers.hex,
+  border_color: cacheNormalizers.hex,
+  show_icons: cacheNormalizers.bool,
+  hide_rank: cacheNormalizers.bool,
+  hide_border: cacheNormalizers.bool,
+  hide_title: cacheNormalizers.bool,
+} as const
 
-const TOP_LANGS_KEYS: ReadonlySet<string> = new Set([
-  'theme',
-  'title_color',
-  'icon_color',
-  'text_color',
-  'bg_color',
-  'border_color',
-  'langs_count',
-  'exclude_langs',
-  'hide_border',
-  'hide_title',
-])
+const TOP_LANGS_KEYS = {
+  theme: cacheNormalizers.theme,
+  title_color: cacheNormalizers.hex,
+  text_color: cacheNormalizers.hex,
+  bg_color: cacheNormalizers.hex,
+  border_color: cacheNormalizers.hex,
+  langs_count: cacheNormalizers.int(1, 20),
+  exclude_langs: cacheNormalizers.csv,
+  hide_border: cacheNormalizers.bool,
+  hide_title: cacheNormalizers.bool,
+} as const
 
 describe('canonicalCacheKey', () => {
   it('keeps an URL with no query untouched', () => {
@@ -56,25 +55,70 @@ describe('canonicalCacheKey', () => {
   })
 
   it('drops parameters that exist in another route but not the matched one', () => {
-    // `langs_count` is only meaningful on top-langs. On the stats route it
-    // must be stripped so it cannot fan out separate stats-card cache entries.
     const a = canonicalCacheKey('https://example.com/api?theme=radical&langs_count=1', STATS_KEYS)
     const b = canonicalCacheKey('https://example.com/api?theme=radical&langs_count=20', STATS_KEYS)
     const c = canonicalCacheKey('https://example.com/api?theme=radical', STATS_KEYS)
     expect(a).toBe(c)
     expect(b).toBe(c)
-    // On the top-langs route, the same parameter remains cache-significant.
     const t1 = canonicalCacheKey('https://example.com/api/top-langs?theme=radical&langs_count=1', TOP_LANGS_KEYS)
     const t2 = canonicalCacheKey('https://example.com/api/top-langs?theme=radical&langs_count=20', TOP_LANGS_KEYS)
     expect(t1).not.toBe(t2)
   })
 
+  it('drops icon_color on the top-langs route (the renderer ignores it)', () => {
+    const a = canonicalCacheKey('https://example.com/api/top-langs?theme=radical&icon_color=ff0000', TOP_LANGS_KEYS)
+    const b = canonicalCacheKey('https://example.com/api/top-langs?theme=radical', TOP_LANGS_KEYS)
+    expect(a).toBe(b)
+  })
+
   it('collapses duplicate keys to the first value so ?theme=x&theme=y cannot fan out', () => {
-    // The route handlers read each key once via c.req.query(key), so the
-    // cache key must do the same — otherwise `?theme=radical&theme=nonce`
-    // creates a distinct entry for the same rendered output.
     const a = canonicalCacheKey('https://example.com/api?theme=radical&theme=nonce', STATS_KEYS)
     const b = canonicalCacheKey('https://example.com/api?theme=radical', STATS_KEYS)
     expect(a).toBe(b)
+  })
+
+  it('drops invalid theme values so ?theme=nonexistent collapses to the default', () => {
+    const a = canonicalCacheKey('https://example.com/api?theme=nonexistent', STATS_KEYS)
+    const b = canonicalCacheKey('https://example.com/api', STATS_KEYS)
+    expect(a).toBe(b)
+  })
+
+  it('normalizes boolean equivalents (true / 1 / yes) to a single canonical token', () => {
+    const a = canonicalCacheKey('https://example.com/api?show_icons=true', STATS_KEYS)
+    const b = canonicalCacheKey('https://example.com/api?show_icons=1', STATS_KEYS)
+    const c = canonicalCacheKey('https://example.com/api?show_icons=YES', STATS_KEYS)
+    expect(a).toBe(b)
+    expect(a).toBe(c)
+  })
+
+  it('normalizes hex color variants (case + optional `#` + URL-encoded `#`) to one key', () => {
+    const a = canonicalCacheKey('https://example.com/api?title_color=FFF', STATS_KEYS)
+    const b = canonicalCacheKey('https://example.com/api?title_color=fff', STATS_KEYS)
+    const c = canonicalCacheKey('https://example.com/api?title_color=%23fff', STATS_KEYS)
+    expect(a).toBe(b)
+    expect(a).toBe(c)
+  })
+
+  it('drops invalid hex colors so ?title_color=zzz collapses to the default', () => {
+    const a = canonicalCacheKey('https://example.com/api?title_color=zzz', STATS_KEYS)
+    const b = canonicalCacheKey('https://example.com/api', STATS_KEYS)
+    expect(a).toBe(b)
+  })
+
+  it('clamps langs_count to the documented [1, 20] range', () => {
+    const high = canonicalCacheKey('https://example.com/api/top-langs?langs_count=999', TOP_LANGS_KEYS)
+    const cap = canonicalCacheKey('https://example.com/api/top-langs?langs_count=20', TOP_LANGS_KEYS)
+    expect(high).toBe(cap)
+    const low = canonicalCacheKey('https://example.com/api/top-langs?langs_count=0', TOP_LANGS_KEYS)
+    const min = canonicalCacheKey('https://example.com/api/top-langs?langs_count=1', TOP_LANGS_KEYS)
+    expect(low).toBe(min)
+  })
+
+  it('canonicalizes exclude_langs (case + ordering + duplicates)', () => {
+    const a = canonicalCacheKey('https://example.com/api/top-langs?exclude_langs=Go,Rust', TOP_LANGS_KEYS)
+    const b = canonicalCacheKey('https://example.com/api/top-langs?exclude_langs=rust,go', TOP_LANGS_KEYS)
+    const c = canonicalCacheKey('https://example.com/api/top-langs?exclude_langs=go,rust,go', TOP_LANGS_KEYS)
+    expect(a).toBe(b)
+    expect(a).toBe(c)
   })
 })
