@@ -73,7 +73,9 @@ const COUNTS_QUERY = `
 `
 
 // Stars query — paginated. `privacy: PUBLIC` keeps private repo stars out of
-// the public-facing totals even when the PAT could see them.
+// the public-facing totals even when the PAT could see them. `isFork: false`
+// excludes forked repos so stars earned upstream do not inflate the total
+// (top-langs already filters forks for the same reason).
 const STARS_QUERY = `
   query userStars($login: String!, $after: String) {
     user(login: $login) {
@@ -82,6 +84,7 @@ const STARS_QUERY = `
         after: $after
         ownerAffiliations: OWNER
         privacy: PUBLIC
+        isFork: false
         orderBy: { direction: DESC, field: STARGAZERS }
       ) {
         nodes { stargazerCount }

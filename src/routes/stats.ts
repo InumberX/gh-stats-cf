@@ -10,9 +10,24 @@ import { edgeCache } from '~/utils/edge-cache'
 import { parseBoolParam } from '~/utils/query'
 import { svgResponse } from '~/utils/svg-response'
 
+// Query keys the stats route actually reads. Anything outside this set is
+// dropped from the edge-cache key (see edgeCache / canonicalCacheKey).
+const STATS_QUERY_KEYS: ReadonlySet<string> = new Set([
+  'theme',
+  'title_color',
+  'icon_color',
+  'text_color',
+  'bg_color',
+  'border_color',
+  'show_icons',
+  'hide_rank',
+  'hide_border',
+  'hide_title',
+])
+
 export const statsRoute = new Hono<AppEnv>()
 
-statsRoute.use('*', edgeCache())
+statsRoute.use('*', edgeCache({ allowedQueryKeys: STATS_QUERY_KEYS }))
 
 statsRoute.get('/', async (c) => {
   const env = c.env

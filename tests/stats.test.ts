@@ -145,6 +145,28 @@ describe('fetchStats', () => {
     expect(JSON.stringify(countsVars)).not.toContain('archived')
   })
 
+  it('filters forks out of the stars query (isFork: false)', async () => {
+    const sentQueries: string[] = []
+    fetchMock.mockImplementation((_url: string, init: RequestInit) => {
+      const body = JSON.parse(init.body as string) as { query: string }
+      sentQueries.push(body.query)
+      if (body.query.includes('userCounts')) {
+        return Promise.resolve(json({ data: countsResult() }))
+      }
+      return Promise.resolve(
+        json({
+          data: { user: { repositories: { nodes: [], pageInfo: { hasNextPage: false, endCursor: null } } } },
+        })
+      )
+    })
+
+    await fetchStats('InumberX', { pats: ['pat'] })
+
+    const starsQuery = sentQueries.find((q) => q.includes('userStars'))
+    expect(starsQuery).toBeDefined()
+    expect(starsQuery).toContain('isFork: false')
+  })
+
   it('throws when the counts response has no user', async () => {
     fetchMock.mockResolvedValueOnce(
       json({

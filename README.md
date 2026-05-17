@@ -36,7 +36,7 @@ Recommended: a [fine-grained PAT](https://github.com/settings/personal-access-to
 ```bash
 npm install
 cp .dev.vars.example .dev.vars
-# then edit .dev.vars and set GITHUB_USERNAME=your-login and PAT_1=ghp_xxx
+# then edit .dev.vars and set GITHUB_USERNAME=your-login and PAT_1=github_pat_xxx
 ```
 
 Edit `wrangler.jsonc`:

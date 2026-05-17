@@ -10,9 +10,24 @@ import { edgeCache } from '~/utils/edge-cache'
 import { parseBoolParam, parseIntParam, parseListParam } from '~/utils/query'
 import { svgResponse } from '~/utils/svg-response'
 
+// Query keys the top-langs route actually reads. Anything outside this set is
+// dropped from the edge-cache key (see edgeCache / canonicalCacheKey).
+const TOP_LANGS_QUERY_KEYS: ReadonlySet<string> = new Set([
+  'theme',
+  'title_color',
+  'icon_color',
+  'text_color',
+  'bg_color',
+  'border_color',
+  'langs_count',
+  'exclude_langs',
+  'hide_border',
+  'hide_title',
+])
+
 export const topLangsRoute = new Hono<AppEnv>()
 
-topLangsRoute.use('*', edgeCache())
+topLangsRoute.use('*', edgeCache({ allowedQueryKeys: TOP_LANGS_QUERY_KEYS }))
 
 topLangsRoute.get('/', async (c) => {
   const env = c.env

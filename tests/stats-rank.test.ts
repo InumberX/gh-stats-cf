@@ -15,7 +15,7 @@ describe('rank calculation', () => {
     expect(r.level).toBe('C')
   })
 
-  it('assigns S to a power user', () => {
+  it('assigns S or A+ to a power user', () => {
     const r = __test.calculateRank({
       commits: 50_000,
       prs: 5_000,
