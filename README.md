@@ -22,7 +22,7 @@ Heavily inspired by [`anuraghazra/github-readme-stats`](https://github.com/anura
 
 ### 2. Create a GitHub Personal Access Token
 
-A PAT is required to lift the GitHub API rate limit from 60/h to 5000/h per token. When the PAT belongs to the configured `GITHUB_USERNAME` it additionally lets the **Commits (last year)** number include that user's own private commits in the contribution window (GitHub provides no public-only commit count).
+A PAT is required to access GitHub's GraphQL API. Authenticated GraphQL traffic is metered as **5,000 points per hour per token** (cost varies per query — connection paging in particular can consume multiple points per request), and additional PAT slots (`PAT_2` … `PAT_5`) extend that budget via rotation. When the PAT belongs to the configured `GITHUB_USERNAME` it additionally lets the **Commits (last year)** number include that user's own private commits in the contribution window (GitHub provides no public-only commit count).
 
 Recommended: a [fine-grained PAT](https://github.com/settings/personal-access-tokens/new) with these permissions:
 

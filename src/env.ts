@@ -1,4 +1,4 @@
-import { isValidUsername } from '~/utils/query'
+import { isValidUsername, parseIntParam } from '~/utils/query'
 
 export type AppEnv = {
   Bindings: {
@@ -27,9 +27,9 @@ export const getOwnerUsername = (env: AppEnv['Bindings']): string | null => {
   return isValidUsername(raw) ? raw : null
 }
 
+const DEFAULT_CACHE_TTL = 86400
+
 export const cacheTtlSeconds = (env: AppEnv['Bindings']): number => {
-  const raw = env.CACHE_SECONDS
-  if (!raw) return 86400
-  const n = Number.parseInt(raw, 10)
-  return Number.isFinite(n) && n > 0 ? n : 86400
+  const n = parseIntParam(env.CACHE_SECONDS, DEFAULT_CACHE_TTL)
+  return n > 0 ? n : DEFAULT_CACHE_TTL
 }

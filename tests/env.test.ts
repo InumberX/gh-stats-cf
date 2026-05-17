@@ -37,4 +37,9 @@ describe('cacheTtlSeconds', () => {
     expect(cacheTtlSeconds({ CACHE_SECONDS: 'abc' })).toBe(86400)
     expect(cacheTtlSeconds({ CACHE_SECONDS: '-5' })).toBe(86400)
   })
+  it('rejects partially-numeric values instead of silently truncating', () => {
+    expect(cacheTtlSeconds({ CACHE_SECONDS: '60abc' })).toBe(86400)
+    expect(cacheTtlSeconds({ CACHE_SECONDS: '1e3' })).toBe(86400)
+    expect(cacheTtlSeconds({ CACHE_SECONDS: '3.5' })).toBe(86400)
+  })
 })

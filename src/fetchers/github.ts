@@ -94,6 +94,20 @@ export const graphqlRequest = async <T>(
         lastError = createGitHubError('Rate limit exceeded', 429, 'RATE_LIMITED')
         continue
       }
+      // Authorization-style GraphQL errors (e.g. `FORBIDDEN`, or messages
+      // like "Resource not accessible by personal access token") can apply
+      // to a single mis-scoped PAT — rotate to the next one rather than
+      // failing the whole request.
+      const isAuthError = body.errors.some(
+        (e) =>
+          e.type === 'FORBIDDEN' ||
+          e.type === 'UNAUTHORIZED' ||
+          /not accessible by .*token|insufficient.*scope|requires.*scope/i.test(e.message)
+      )
+      if (isAuthError) {
+        lastError = createGitHubError(body.errors[0]?.message ?? 'GraphQL authorization error', 403, 'UNAUTHORIZED')
+        continue
+      }
       throw createGitHubError(body.errors[0]?.message ?? 'GraphQL error', 502, 'GRAPHQL_ERROR')
     }
 

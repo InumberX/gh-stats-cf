@@ -6,8 +6,10 @@
 GITHUB_USERNAME=your-github-login
 
 # GitHub Personal Access Token(s). At least PAT_1 is required.
-# Fine-grained recommended. Scopes: Repository Contents (Read), Metadata (Read).
-PAT_1=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# Fine-grained recommended (prefix `github_pat_`). Permissions:
+#   Repository → Contents: Read, Metadata: Read (auto).
+# Classic PATs (prefix `ghp_`) also work but cannot scope permissions.
+PAT_1=github_pat_xxxxxxxxxxxxxxxxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 # PAT_2=
 # PAT_3=
 

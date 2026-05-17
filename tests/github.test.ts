@@ -170,6 +170,38 @@ describe('graphqlRequest', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
+  it('rotates on GraphQL FORBIDDEN type so a mis-scoped PAT does not poison the request', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ errors: [{ type: 'FORBIDDEN', message: 'Resource not accessible by personal access token' }] })
+    )
+    fetchMock.mockResolvedValueOnce(jsonResponse({ data: { ok: true } }))
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    const result = await graphqlRequest<{ ok: boolean }>('q', {}, ['scope-bad', 'scope-good'])
+    expect(result).toEqual({ ok: true })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('rotates on a "not accessible by ... token" message even without an error type', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ errors: [{ message: 'Resource not accessible by personal access token' }] })
+    )
+    fetchMock.mockResolvedValueOnce(jsonResponse({ data: { ok: true } }))
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    const result = await graphqlRequest<{ ok: boolean }>('q', {}, ['a', 'b'])
+    expect(result).toEqual({ ok: true })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('reports UNAUTHORIZED after every PAT returns FORBIDDEN', async () => {
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(jsonResponse({ errors: [{ type: 'FORBIDDEN', message: 'forbidden' }] }))
+    )
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    const err = (await graphqlRequest('q', {}, ['a', 'b']).catch((e) => e)) as GitHubError
+    expect(err.kind).toBe('UNAUTHORIZED')
+    expect(err.status).toBe(403)
+  })
+
   it('throws BAD_RESPONSE on empty data', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({}))
     const err = (await graphqlRequest('q', {}, ['a']).catch((e) => e)) as GitHubError
