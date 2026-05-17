@@ -20,6 +20,25 @@ type GraphQLResponse<T> = {
   errors?: { type?: string; message: string }[]
 }
 
+// GitHub returns HTTP 403 for both bad credentials AND rate / abuse limits.
+// Heuristics to distinguish the rate-limit case:
+//   - `x-ratelimit-remaining: 0` means primary rate limit exhausted.
+//   - `retry-after` header is set on abuse / secondary rate limits.
+//   - The body's `message` mentions "rate limit" or "abuse" wording.
+// Anything else with status 403 (or 401) is treated as UNAUTHORIZED so the
+// rotation loop tries the next PAT.
+const isRateLimited403 = async (res: Response): Promise<boolean> => {
+  if (res.headers.get('x-ratelimit-remaining') === '0') return true
+  if (res.headers.get('retry-after')) return true
+  try {
+    const cloned = res.clone()
+    const text = await cloned.text()
+    return /rate limit|abuse/i.test(text)
+  } catch {
+    return false
+  }
+}
+
 export const graphqlRequest = async <T>(
   query: string,
   variables: Record<string, unknown>,
@@ -46,8 +65,17 @@ export const graphqlRequest = async <T>(
       body: JSON.stringify({ query, variables }),
     })
 
-    if (res.status === 401 || res.status === 403) {
-      lastError = createGitHubError(`GitHub API returned ${res.status}`, res.status, 'UNAUTHORIZED')
+    if (res.status === 401) {
+      lastError = createGitHubError('GitHub API returned 401', 401, 'UNAUTHORIZED')
+      continue
+    }
+
+    if (res.status === 403) {
+      if (await isRateLimited403(res)) {
+        lastError = createGitHubError('GitHub API rate limit exceeded (403)', 429, 'RATE_LIMITED')
+      } else {
+        lastError = createGitHubError('GitHub API returned 403', 403, 'UNAUTHORIZED')
+      }
       continue
     }
 

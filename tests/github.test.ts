@@ -12,10 +12,19 @@ const jsonResponse = (body: unknown, init: ResponseInit = {}): Response =>
     ...init,
   })
 
-const errorResponse = (status: number): Response =>
+const errorResponse = (status: number, extraHeaders: Record<string, string> = {}): Response =>
   new Response(JSON.stringify({ message: 'err' }), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...extraHeaders },
+  })
+
+const rateLimitedResponse = (
+  message = 'API rate limit exceeded',
+  headers: Record<string, string> = { 'x-ratelimit-remaining': '0' }
+): Response =>
+  new Response(JSON.stringify({ message }), {
+    status: 403,
+    headers: { 'Content-Type': 'application/json', ...headers },
   })
 
 describe('graphqlRequest', () => {
@@ -64,7 +73,7 @@ describe('graphqlRequest', () => {
     expect(secondAuth?.Authorization).toBe('Bearer pat-good')
   })
 
-  it('rotates to the next PAT on 403', async () => {
+  it('rotates to the next PAT on plain 403 (no rate-limit signal)', async () => {
     fetchMock.mockResolvedValueOnce(errorResponse(403))
     fetchMock.mockResolvedValueOnce(jsonResponse({ data: { ok: 1 } }))
     vi.spyOn(Math, 'random').mockReturnValue(0)
@@ -73,13 +82,45 @@ describe('graphqlRequest', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
-  it('throws UNAUTHORIZED after all PATs fail with 401/403', async () => {
+  it('throws UNAUTHORIZED after all PATs fail with 401', async () => {
     fetchMock.mockImplementation(() => Promise.resolve(errorResponse(401)))
     vi.spyOn(Math, 'random').mockReturnValue(0)
     const err = (await graphqlRequest('q', {}, ['a', 'b']).catch((e) => e)) as GitHubError
     expect(err.kind).toBe('UNAUTHORIZED')
     expect(err.status).toBe(401)
     expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('classifies a 403 with x-ratelimit-remaining=0 as RATE_LIMITED', async () => {
+    fetchMock.mockImplementation(() => Promise.resolve(rateLimitedResponse()))
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    const err = (await graphqlRequest('q', {}, ['a', 'b']).catch((e) => e)) as GitHubError
+    expect(err.kind).toBe('RATE_LIMITED')
+    expect(err.status).toBe(429)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('classifies a 403 with retry-after as RATE_LIMITED (secondary limit)', async () => {
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(rateLimitedResponse('You have exceeded a secondary rate limit', { 'retry-after': '60' }))
+    )
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    const err = (await graphqlRequest('q', {}, ['a']).catch((e) => e)) as GitHubError
+    expect(err.kind).toBe('RATE_LIMITED')
+    expect(err.status).toBe(429)
+  })
+
+  it('classifies a 403 with abuse-detection wording in body as RATE_LIMITED', async () => {
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ message: 'abuse detection mechanism triggered' }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+    )
+    const err = (await graphqlRequest('q', {}, ['a']).catch((e) => e)) as GitHubError
+    expect(err.kind).toBe('RATE_LIMITED')
   })
 
   it('rotates on non-2xx and reports BAD_RESPONSE when all PATs fail', async () => {

@@ -8,7 +8,9 @@ const app = new Hono<AppEnv>()
 
 app.get('/', (c) =>
   c.text(
-    'gh-stats-cf — GitHub readme stats cards on Cloudflare Workers.\nSee /api?username=... and /api/top-langs?username=...'
+    'gh-stats-cf — GitHub readme stats cards on Cloudflare Workers.\n' +
+      'Endpoints: /api (stats) and /api/top-langs (most-used languages).\n' +
+      'The GitHub login served is fixed via the GITHUB_USERNAME env var, not a query parameter.'
   )
 )
 
