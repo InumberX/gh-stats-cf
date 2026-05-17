@@ -11,7 +11,7 @@ export type Stats = {
   rank: { level: string; percentile: number }
 }
 
-type StatsResponse = {
+type CountsResponse = {
   user: {
     name: string | null
     login: string
@@ -21,10 +21,14 @@ type StatsResponse = {
       restrictedContributionsCount: number
     }
     repositoriesContributedTo: { totalCount: number }
-    pullRequests: { totalCount: number }
-    openIssues: { totalCount: number }
-    closedIssues: { totalCount: number }
     followers: { totalCount: number }
+  } | null
+  publicPRs: { issueCount: number }
+  publicIssues: { issueCount: number }
+}
+
+type StarsResponse = {
+  user: {
     repositories: {
       totalCount: number
       nodes: { stargazerCount: number }[]
@@ -33,11 +37,12 @@ type StatsResponse = {
   } | null
 }
 
-// `privacy: PUBLIC` is explicit so that, even when the configured PAT can read
-// the owner's private repositories, only public repo stars and counts are
-// surfaced through this public endpoint.
-const STATS_QUERY = `
-  query userInfo($login: String!, $after: String) {
+// Counts query — fetched once per request. PR/Issue counts go through the
+// Search API with `is:public` so private repo activity never leaks into the
+// public stats card. `repositoriesContributedTo` accepts `privacy: PUBLIC`
+// directly.
+const COUNTS_QUERY = `
+  query userCounts($login: String!, $publicPrQuery: String!, $publicIssueQuery: String!) {
     user(login: $login) {
       name
       login
@@ -48,12 +53,21 @@ const STATS_QUERY = `
       }
       repositoriesContributedTo(
         first: 1
+        privacy: PUBLIC
         contributionTypes: [COMMIT, PULL_REQUEST, ISSUE, REPOSITORY]
       ) { totalCount }
-      pullRequests(first: 1) { totalCount }
-      openIssues: issues(states: OPEN) { totalCount }
-      closedIssues: issues(states: CLOSED) { totalCount }
       followers { totalCount }
+    }
+    publicPRs: search(query: $publicPrQuery, type: ISSUE, first: 1) { issueCount }
+    publicIssues: search(query: $publicIssueQuery, type: ISSUE, first: 1) { issueCount }
+  }
+`
+
+// Stars query — paginated. `privacy: PUBLIC` keeps private repo stars out of
+// the public-facing totals even when the PAT could see them.
+const STARS_QUERY = `
+  query userStars($login: String!, $after: String) {
+    user(login: $login) {
       repositories(
         first: 100
         after: $after
@@ -125,21 +139,35 @@ export const fetchStats = async (
   username: string,
   options: { pats: string[]; countPrivate: boolean }
 ): Promise<Stats> => {
+  // 1. Counts (one-shot). Username is validated upstream to be alphanumeric +
+  //    hyphen only (see isValidUsername), so embedding it into a search query
+  //    string is safe.
+  const counts: CountsResponse = await graphqlRequest<CountsResponse>(
+    COUNTS_QUERY,
+    {
+      login: username,
+      publicPrQuery: `is:pr author:${username} is:public archived:false`,
+      publicIssueQuery: `is:issue author:${username} is:public archived:false`,
+    },
+    options.pats
+  )
+  if (!counts.user) {
+    throw new Error(`User not found: ${username}`)
+  }
+
+  // 2. Stars (paginated).
   let totalStars = 0
   let after: string | null = null
-  let user: StatsResponse['user'] | null = null
   let truncated = false
-
   for (let page = 0; page < MAX_REPO_PAGES; page++) {
-    const data: StatsResponse = await graphqlRequest<StatsResponse>(
-      STATS_QUERY,
+    const data: StarsResponse = await graphqlRequest<StarsResponse>(
+      STARS_QUERY,
       { login: username, after },
       options.pats
     )
     if (!data.user) {
       throw new Error(`User not found: ${username}`)
     }
-    user = data.user
     for (const node of data.user.repositories.nodes) {
       totalStars += node.stargazerCount
     }
@@ -147,23 +175,18 @@ export const fetchStats = async (
     after = data.user.repositories.pageInfo.endCursor
     if (page === MAX_REPO_PAGES - 1) truncated = true
   }
-
-  if (!user) {
-    throw new Error(`User not found: ${username}`)
-  }
-
   if (truncated) {
     console.warn(`Star aggregation truncated at ${MAX_REPO_PAGES * 100} repos for user ${username}`)
   }
 
   const totalCommits =
-    user.contributionsCollection.totalCommitContributions +
-    (options.countPrivate ? user.contributionsCollection.restrictedContributionsCount : 0)
-  const totalPRs = user.pullRequests.totalCount
-  const totalIssues = user.openIssues.totalCount + user.closedIssues.totalCount
-  const reviews = user.contributionsCollection.totalPullRequestReviewContributions
-  const contributedTo = user.repositoriesContributedTo.totalCount
-  const followers = user.followers.totalCount
+    counts.user.contributionsCollection.totalCommitContributions +
+    (options.countPrivate ? counts.user.contributionsCollection.restrictedContributionsCount : 0)
+  const totalPRs = counts.publicPRs.issueCount
+  const totalIssues = counts.publicIssues.issueCount
+  const reviews = counts.user.contributionsCollection.totalPullRequestReviewContributions
+  const contributedTo = counts.user.repositoriesContributedTo.totalCount
+  const followers = counts.user.followers.totalCount
 
   const rank = calculateRank({
     commits: totalCommits,
@@ -176,8 +199,8 @@ export const fetchStats = async (
   })
 
   return {
-    name: user.name ?? user.login,
-    login: user.login,
+    name: counts.user.name ?? counts.user.login,
+    login: counts.user.login,
     totalStars,
     totalCommits,
     totalPRs,
