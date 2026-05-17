@@ -17,7 +17,7 @@ const ROWS = (stats: Stats): Row[] => [
   { label: 'Commits (last year):', value: stats.totalCommits, icon: 'commit' },
   { label: 'Total PRs:', value: stats.totalPRs, icon: 'pr' },
   { label: 'Total Issues:', value: stats.totalIssues, icon: 'issue' },
-  { label: 'Contributed to (last year):', value: stats.contributedTo, icon: 'contrib' },
+  { label: 'Contributed to:', value: stats.contributedTo, icon: 'contrib' },
 ]
 
 // Rank circle layout
