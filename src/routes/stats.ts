@@ -13,7 +13,10 @@ import { svgResponse } from '~/utils/svg-response'
 // Query keys the stats route actually reads, each mapped to the same
 // normalization the handler performs. Anything outside this map is dropped
 // from the edge-cache key (see edgeCache / canonicalCacheKey).
-const STATS_QUERY_KEYS = {
+//
+// Exported so cache-key tests can pin on the production allow-list instead
+// of duplicating it (drift between the two would silently weaken coverage).
+export const STATS_QUERY_KEYS = {
   theme: cacheNormalizers.theme,
   title_color: cacheNormalizers.hex,
   icon_color: cacheNormalizers.hex,

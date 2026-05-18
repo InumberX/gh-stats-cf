@@ -14,7 +14,10 @@ import { svgResponse } from '~/utils/svg-response'
 // normalization the handler performs. `icon_color` is intentionally absent —
 // `renderTopLangsCard` does not paint any icons, so varying it must not
 // fragment the cache (see edgeCache / canonicalCacheKey).
-const TOP_LANGS_QUERY_KEYS = {
+//
+// Exported so cache-key tests can pin on the production allow-list instead
+// of duplicating it (drift between the two would silently weaken coverage).
+export const TOP_LANGS_QUERY_KEYS = {
   theme: cacheNormalizers.theme,
   title_color: cacheNormalizers.hex,
   text_color: cacheNormalizers.hex,

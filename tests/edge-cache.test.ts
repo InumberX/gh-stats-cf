@@ -1,31 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { cacheNormalizers, canonicalCacheKey } from '~/utils/edge-cache'
-
-const STATS_KEYS = {
-  theme: cacheNormalizers.theme,
-  title_color: cacheNormalizers.hex,
-  icon_color: cacheNormalizers.hex,
-  text_color: cacheNormalizers.hex,
-  bg_color: cacheNormalizers.hex,
-  border_color: cacheNormalizers.hex,
-  show_icons: cacheNormalizers.bool,
-  hide_rank: cacheNormalizers.bool,
-  hide_border: cacheNormalizers.bool,
-  hide_title: cacheNormalizers.bool,
-} as const
-
-const TOP_LANGS_KEYS = {
-  theme: cacheNormalizers.theme,
-  title_color: cacheNormalizers.hex,
-  text_color: cacheNormalizers.hex,
-  bg_color: cacheNormalizers.hex,
-  border_color: cacheNormalizers.hex,
-  langs_count: cacheNormalizers.int(1, 20),
-  exclude_langs: cacheNormalizers.csv,
-  hide_border: cacheNormalizers.bool,
-  hide_title: cacheNormalizers.bool,
-} as const
+// Use the production allow-lists directly so drift in the route configs
+// surfaces as test failures rather than silently weakening this coverage.
+import { STATS_QUERY_KEYS as STATS_KEYS } from '~/routes/stats'
+import { TOP_LANGS_QUERY_KEYS as TOP_LANGS_KEYS } from '~/routes/top-langs'
+import { canonicalCacheKey } from '~/utils/edge-cache'
 
 describe('canonicalCacheKey', () => {
   it('keeps an URL with no query untouched', () => {
