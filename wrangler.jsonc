@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Change `name` to your own Worker name before deploying.
+  "name": "gh-stats-cf",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-05-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  }
+  // Set runtime secrets via `wrangler secret put`:
+  //   wrangler secret put PAT_1
+  //
+  // `GITHUB_USERNAME` is REQUIRED — this worker is single-user and serves
+  // stats for that one account. Set it together with any optional vars. The
+  // leading `,` on the first uncommented line becomes the property separator
+  // after the `observability` block above, so this block can be uncommented
+  // as-is.
+  // ,"vars": {
+  //   "GITHUB_USERNAME": "your-github-login",
+  //   "CACHE_SECONDS": "86400"
+  // }
+}

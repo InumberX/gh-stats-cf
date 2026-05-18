@@ -1,0 +1,38 @@
+{
+  "name": "gh-stats-cf",
+  "version": "0.1.0",
+  "description": "GitHub readme stats cards for Cloudflare Workers (Hono + TypeScript)",
+  "type": "module",
+  "private": false,
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "wrangler deploy --dry-run --outdir=dist",
+    "typecheck": "wrangler types && tsc --noEmit",
+    "test": "vitest",
+    "test-run": "vitest --run",
+    "lint": "oxlint ./src/ ./tests/ --max-warnings=0",
+    "lint-fix": "oxlint ./src/ ./tests/ --max-warnings=0 --fix",
+    "format": "oxfmt --check \"./{src,tests}/**/*.{ts,tsx}\"",
+    "format-fix": "oxfmt \"./{src,tests}/**/*.{ts,tsx}\"",
+    "pre-commit": "npm run typecheck && npm run lint-fix && npm run format-fix",
+    "upgrade": "npx npm-check-updates -u",
+    "upgrade-check": "npx npm-check-updates",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "hono": "^4.12.19"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.19",
+    "oxfmt": "^0.50.0",
+    "oxlint": "^1.65.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.6",
+    "wrangler": "^4.92.0"
+  }
+}
