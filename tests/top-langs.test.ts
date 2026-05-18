@@ -131,7 +131,7 @@ describe('fetchTopLangs', () => {
     expect(result).toEqual([{ name: 'Mystery', size: 1, color: '#858585' }])
   })
 
-  it('limits results to the requested size', async () => {
+  it('returns all aggregated languages sorted desc (truncation happens in the renderer)', async () => {
     const pages: Page[] = [
       {
         nodes: [
@@ -150,9 +150,9 @@ describe('fetchTopLangs', () => {
     ]
     fetchMock.mockImplementation(() => Promise.resolve(respond(pages)))
 
-    const result = await fetchTopLangs('octocat', { pats: ['pat'], size: 2 })
+    const result = await fetchTopLangs('octocat', { pats: ['pat'] })
 
-    expect(result.map((r) => r.name)).toEqual(['A', 'B'])
+    expect(result.map((r) => r.name)).toEqual(['A', 'B', 'C'])
   })
 
   it('throws when the user is not present', async () => {

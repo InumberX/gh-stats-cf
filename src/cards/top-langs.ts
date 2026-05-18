@@ -6,6 +6,10 @@ export type TopLangsCardOptions = {
   hideBorder: boolean
   hideTitle: boolean
   username: string
+  // Maximum number of language rows / bar segments to display. Percentages
+  // are still computed against the **full** included total so dropping rows
+  // does not renormalize the visible languages to sum to 100%.
+  size: number
 }
 
 const stripHash = (color: string): string => (color.startsWith('#') ? color.slice(1) : color)
@@ -17,8 +21,12 @@ export const renderTopLangsCard = (languages: LanguageEntry[], theme: Theme, opt
   const barWidth = width - padding * 2
   const barHeight = 8
 
+  // Percent is relative to the full included total (after `excludeLangs`
+  // filtering in the fetcher). Truncating after the divide means a top-N
+  // view of `langs_count=2` on [50, 30, 20] reports 50%/30%, not 62.5%/37.5%.
   const totalSize = languages.reduce((sum, l) => sum + l.size, 0) || 1
-  const langs = languages.map((l) => ({
+  const limit = Math.max(1, options.size)
+  const langs = languages.slice(0, limit).map((l) => ({
     name: l.name,
     color: stripHash(l.color),
     percent: (l.size / totalSize) * 100,

@@ -54,9 +54,13 @@ const MAX_REPO_PAGES = 100
 
 const DEFAULT_COLOR = '#858585'
 
+// Returns ALL aggregated languages (sorted by size desc, after `excludeLangs`
+// filtering). Truncation to `langs_count` happens in the renderer so that
+// per-language percentages are computed against the full included total,
+// not the displayed subset.
 export const fetchTopLangs = async (
   username: string,
-  options: { pats: string[]; excludeLangs?: string[]; size?: number }
+  options: { pats: string[]; excludeLangs?: string[] }
 ): Promise<LanguageEntry[]> => {
   const exclude = new Set((options.excludeLangs ?? []).map((s) => s.toLowerCase()))
   const totals = new Map<string, { size: number; color: string }>()
@@ -94,6 +98,5 @@ export const fetchTopLangs = async (
     .map(([name, { size, color }]) => ({ name, size, color }))
     .sort((a, b) => b.size - a.size)
 
-  const limit = options.size && options.size > 0 ? options.size : 5
-  return entries.slice(0, limit)
+  return entries
 }

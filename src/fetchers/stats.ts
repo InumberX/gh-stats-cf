@@ -62,6 +62,7 @@ const COUNTS_QUERY = `
       repositoriesContributedTo(
         first: 1
         privacy: PUBLIC
+        includeUserRepositories: true
         contributionTypes: [COMMIT, PULL_REQUEST, ISSUE, REPOSITORY]
       ) { totalCount }
       followers { totalCount }

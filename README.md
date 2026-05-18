@@ -92,7 +92,7 @@ Your cards will be available at `https://<worker-name>.<your-subdomain>.workers.
 | Param           | Type   | Default | Description |
 | --------------- | ------ | ------- | --- |
 | `theme`         | string | `default` | Same set as above |
-| `langs_count`   | int    | `5`     | Number of languages to show (clamped to 1–20) |
+| `langs_count`   | int    | `5`     | Number of language rows to display (clamped to 1–20). Per-language percentages are computed against all of your included languages, so increasing `langs_count` only adds rows and never renormalizes the visible ones. |
 | `exclude_langs` | csv    | (none)  | Comma-separated language names to exclude |
 | `hide_border`   | bool   | `false` | Hide the card border |
 | `hide_title`    | bool   | `false` | Hide the header title |
@@ -101,7 +101,7 @@ Color overrides (`title_color`, `text_color`, `bg_color`, `border_color`) work h
 
 > **Privacy note:** stars, languages, PR, issue, and review counts are aggregated **only from public repositories** even when the configured PAT could see private ones. The one exception is **Commits (last year)**: GitHub does not expose a public-only commit count, so when the PAT belongs to `GITHUB_USERNAME` (the expected setup) this number includes the configured user's own private commits within the contribution window. This is not a leak — it is the configured user's own data being shown on their own card.
 >
-> **Scope note:** "Commits (last year)" reflects GitHub's contribution window (rolling 365 days), not an all-time total. PR/Issue/Review counts are all-time public totals (archived repos included). Repository pagination is capped at 10,000 repos per request — accounts beyond that are rare but will be truncated with a log warning.
+> **Scope note:** "Commits (last year)" reflects GitHub's contribution window (rolling 365 days), not an all-time total. PR / Issue / Review counts are all-time public totals (archived repos included). The **review count** is the number of distinct public PRs the user has reviewed (`is:pr reviewed-by:<user> is:public`) — leaving multiple reviews on the same PR collapses to one. It is only used as an input to the rank calculation and is not displayed on the card directly. Repository pagination is capped at 10,000 repos per request — accounts beyond that are rare but will be truncated with a log warning.
 
 ## Caching
 

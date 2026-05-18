@@ -62,7 +62,6 @@ topLangsRoute.get('/', async (c) => {
     const languages = await fetchTopLangs(username, {
       pats,
       excludeLangs: parseListParam(c.req.query('exclude_langs')),
-      size: langsCount,
     })
     if (languages.length === 0) {
       return svgResponse(c, renderErrorCard('No languages found for this user.', theme), 60)
@@ -71,6 +70,7 @@ topLangsRoute.get('/', async (c) => {
       hideBorder: parseBoolParam(c.req.query('hide_border'), false),
       hideTitle: parseBoolParam(c.req.query('hide_title'), false),
       username,
+      size: langsCount,
     })
     return svgResponse(c, svg, cacheSeconds)
   } catch (err) {

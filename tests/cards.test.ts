@@ -72,7 +72,7 @@ describe('renderTopLangsCard', () => {
         { name: 'CSS', color: '#563d7c', size: 300 },
       ],
       themes.radical,
-      { hideBorder: false, hideTitle: false, username: 'InumberX' }
+      { hideBorder: false, hideTitle: false, username: 'InumberX', size: 5 }
     )
     expect(svg.trim().startsWith('<svg')).toBe(true)
     expect(svg).toContain('Most Used Languages')
@@ -87,6 +87,7 @@ describe('renderTopLangsCard', () => {
       hideBorder: true,
       hideTitle: false,
       username: 'octocat',
+      size: 5,
     })
     expect(svg).toContain('Go 100.00%')
   })
@@ -96,9 +97,44 @@ describe('renderTopLangsCard', () => {
       hideBorder: false,
       hideTitle: false,
       username: '<x>',
+      size: 5,
     })
     expect(svg).not.toContain('<x>GitHub')
     expect(svg).toContain('&lt;x&gt;')
+  })
+
+  it('computes percentages relative to the full included total (top-N truncation does not renormalize)', () => {
+    // With sizes 50/30/20 (sum = 100) and size=2, the visible rows must
+    // report 50% / 30% — not 62.5% / 37.5% as if the truncated subset
+    // were the whole.
+    const svg = renderTopLangsCard(
+      [
+        { name: 'JS', color: '#000', size: 50 },
+        { name: 'TS', color: '#000', size: 30 },
+        { name: 'Go', color: '#000', size: 20 },
+      ],
+      themes.default,
+      { hideBorder: false, hideTitle: false, username: 'InumberX', size: 2 }
+    )
+    expect(svg).toContain('JS 50.00%')
+    expect(svg).toContain('TS 30.00%')
+    // The dropped row must NOT appear in the rendered list.
+    expect(svg).not.toContain('Go ')
+  })
+
+  it('truncates to `size` rows but keeps the percent denominator over all entries', () => {
+    const svg = renderTopLangsCard(
+      [
+        { name: 'A', color: '#000', size: 5 },
+        { name: 'B', color: '#000', size: 4 },
+        { name: 'C', color: '#000', size: 3 },
+      ],
+      themes.default,
+      { hideBorder: false, hideTitle: false, username: 'u', size: 2 }
+    )
+    expect(svg).toContain('A 41.67%')
+    expect(svg).toContain('B 33.33%')
+    expect(svg).not.toContain('C ')
   })
 })
 
