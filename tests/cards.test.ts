@@ -136,6 +136,30 @@ describe('renderTopLangsCard', () => {
     expect(svg).toContain('B 33.33%')
     expect(svg).not.toContain('C ')
   })
+
+  it('truncates long language names with an ellipsis so rows do not overflow the column', () => {
+    const svg = renderTopLangsCard([{ name: 'Jupyter Notebook', color: '#000', size: 1 }], themes.default, {
+      hideBorder: false,
+      hideTitle: false,
+      username: 'u',
+      size: 5,
+    })
+    // Visible <text> row carries a truncated name + ellipsis (slice to MAX-1).
+    expect(svg).toContain('Jupyter Not… 100.00%')
+    // Accessible description keeps the full name for screen readers.
+    expect(svg).toContain('Jupyter Notebook 100.00%</desc>')
+  })
+
+  it('keeps short language names unchanged', () => {
+    const svg = renderTopLangsCard([{ name: 'Go', color: '#000', size: 1 }], themes.default, {
+      hideBorder: false,
+      hideTitle: false,
+      username: 'u',
+      size: 5,
+    })
+    expect(svg).toContain('Go 100.00%')
+    expect(svg).not.toContain('…')
+  })
 })
 
 describe('renderErrorCard', () => {
@@ -148,5 +172,31 @@ describe('renderErrorCard', () => {
     const svg = renderErrorCard('rate limit exceeded', themes.default)
     expect(svg).toContain('aria-labelledby')
     expect(svg).toContain('<desc id="descId">rate limit exceeded</desc>')
+  })
+
+  it('wraps long messages onto multiple lines and grows the card height', () => {
+    const short = renderErrorCard('rate limit exceeded', themes.default)
+    const longMsg =
+      'The GitHub GraphQL API returned a long, descriptive error message that should wrap across multiple lines so the user can actually read what went wrong with their request when they are debugging.'
+    const long = renderErrorCard(longMsg, themes.default)
+
+    const heightOf = (svg: string): number => {
+      const m = svg.match(/height="(\d+)"/)
+      if (!m) throw new Error('height not found')
+      return Number.parseInt(m[1] ?? '0', 10)
+    }
+    expect(heightOf(long)).toBeGreaterThan(heightOf(short))
+    // Multiple `<text class="msg">` elements appear for wrapped lines (in
+    // addition to the static help link).
+    const msgLineCount = long.split('class="msg"').length - 1
+    expect(msgLineCount).toBeGreaterThanOrEqual(3)
+    // Accessible description still carries the full untruncated message.
+    expect(long).toContain(`<desc id="descId">${longMsg}</desc>`)
+  })
+
+  it('caps wrapped output at MAX_LINES and marks overflow with an ellipsis', () => {
+    const huge = 'word '.repeat(200).trim()
+    const svg = renderErrorCard(huge, themes.default)
+    expect(svg).toContain('…')
   })
 })

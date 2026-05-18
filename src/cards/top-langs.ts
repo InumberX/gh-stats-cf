@@ -14,6 +14,15 @@ export type TopLangsCardOptions = {
 
 const stripHash = (color: string): string => (color.startsWith('#') ? color.slice(1) : color)
 
+// The per-row column is ~125px wide and at 11px Segoe UI each glyph averages
+// ~6.5px, so the row text (e.g. `Jupyter Notebook 99.99%`) must stay under
+// roughly 18 characters or it spills into the next column. Truncate the name
+// (not the percent) so long language names render readably.
+const MAX_NAME_CHARS = 12
+
+const truncateName = (name: string): string =>
+  name.length > MAX_NAME_CHARS ? `${name.slice(0, MAX_NAME_CHARS - 1)}…` : name
+
 export const renderTopLangsCard = (languages: LanguageEntry[], theme: Theme, options: TopLangsCardOptions): string => {
   const width = 300
   const padding = 25
@@ -28,6 +37,7 @@ export const renderTopLangsCard = (languages: LanguageEntry[], theme: Theme, opt
   const limit = Math.max(1, options.size)
   const langs = languages.slice(0, limit).map((l) => ({
     name: l.name,
+    label: truncateName(l.name),
     color: stripHash(l.color),
     percent: (l.size / totalSize) * 100,
   }))
@@ -62,7 +72,7 @@ export const renderTopLangsCard = (languages: LanguageEntry[], theme: Theme, opt
       return `
         <g transform="translate(${x}, ${y})">
           <circle cx="5" cy="6" r="5" fill="#${l.color}"/>
-          <text x="15" y="10" class="lang-name">${escapeXml(l.name)} ${percent}%</text>
+          <text x="15" y="10" class="lang-name">${escapeXml(l.label)} ${percent}%</text>
         </g>
       `
     })
