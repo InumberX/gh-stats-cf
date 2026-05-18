@@ -25,6 +25,16 @@ const RANK_R = 40
 const RANK_CX = 445
 const RANK_CY = 95
 
+// 18px Segoe UI at the title averages ~10px per glyph. Title starts at x=25
+// and must clear the rank circle (centered at x=445, r=40) on the right.
+// Available width ≈ 380px → about 38 chars. After the static suffix
+// `'s GitHub Stats` (15 chars), the user's display name can be at most ~24
+// chars before the rendered title spills past the 495px card width.
+const MAX_VISIBLE_NAME_CHARS = 24
+
+const truncateForTitle = (name: string): string =>
+  name.length > MAX_VISIBLE_NAME_CHARS ? `${name.slice(0, MAX_VISIBLE_NAME_CHARS - 1)}…` : name
+
 const rankCircle = (percentile: number, color: string): string => {
   const circumference = 2 * Math.PI * RANK_R
   // Lower percentile = better rank (S = <=1, C = 100).
@@ -76,9 +86,15 @@ export const renderStatsCard = (stats: Stats, theme: Theme, options: StatsCardOp
   const height = minHeight
 
   // Raw (unescaped) title text — escape once at every output site.
+  // The accessible <title> keeps the full display name; the visible <text>
+  // element truncates it so long GitHub display names do not spill past the
+  // 495px card width.
   const titleRaw = options.hideTitle ? '' : `${stats.name}'s GitHub Stats`
   const accessibleTitle = titleRaw || `${stats.login} GitHub Stats`
-  const titleEl = options.hideTitle ? '' : `<text x="${padding}" y="35" class="header">${escapeXml(titleRaw)}</text>`
+  const visibleTitle = options.hideTitle ? '' : `${truncateForTitle(stats.name)}'s GitHub Stats`
+  const titleEl = options.hideTitle
+    ? ''
+    : `<text x="${padding}" y="35" class="header">${escapeXml(visibleTitle)}</text>`
 
   const rankBlock = options.hideRank
     ? ''

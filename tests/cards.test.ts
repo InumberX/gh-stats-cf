@@ -52,6 +52,22 @@ describe('renderStatsCard', () => {
     expect(svg).not.toContain('NiNE&#39;s GitHub Stats')
   })
 
+  it('truncates the visible title for long display names but keeps the full name in <title>', () => {
+    const longName = 'A'.repeat(60)
+    const svg = renderStatsCard({ ...sampleStats, name: longName }, themes.default, {
+      showIcons: false,
+      hideRank: false,
+      hideBorder: false,
+      hideTitle: false,
+    })
+    // Accessible <title> keeps the full unescaped (then XML-escaped) name.
+    expect(svg).toContain(`<title id="titleId">${longName}&#39;s GitHub Stats</title>`)
+    // Visible <text class="header"> must NOT carry the full long name.
+    expect(svg).not.toContain(`>${longName}&#39;s GitHub Stats</text>`)
+    // It must include an ellipsis to signal truncation.
+    expect(svg).toContain('…')
+  })
+
   it('escapes HTML in name', () => {
     const svg = renderStatsCard({ ...sampleStats, name: '<script>' }, themes.default, {
       showIcons: false,
@@ -196,6 +212,16 @@ describe('renderErrorCard', () => {
 
   it('caps wrapped output at MAX_LINES and marks overflow with an ellipsis', () => {
     const huge = 'word '.repeat(200).trim()
+    const svg = renderErrorCard(huge, themes.default)
+    expect(svg).toContain('…')
+  })
+
+  it('marks overflow with an ellipsis for an unbroken word that exceeds maxChars * maxLines', () => {
+    // 68 chars/line * 4 lines = 272 chars max. A single unbroken word of
+    // 275 chars exceeds that. The earlier reconstruction-based detector
+    // counted hard-split chunks joined by spaces, which made `consumed`
+    // appear larger than the original and dropped the ellipsis.
+    const huge = 'x'.repeat(275)
     const svg = renderErrorCard(huge, themes.default)
     expect(svg).toContain('…')
   })

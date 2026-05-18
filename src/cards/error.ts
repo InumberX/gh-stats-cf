@@ -4,49 +4,55 @@ import { escapeXml } from '~/utils/svg'
 // Word-wrap a message into at most `maxLines` lines, each at most
 // `maxChars` characters wide. Words longer than `maxChars` are hard-split;
 // content beyond `maxLines` is suffixed with `…` on the last line.
+//
+// Overflow detection walks an explicit `cursor` over the normalized input
+// rather than reconstructing it from the emitted lines. The reconstruction
+// approach silently inserted spaces between hard-split chunks that were
+// never in the original (e.g. a single 300-char word), masking the
+// overflow for unbroken long strings just over `maxChars * maxLines`.
 const wrapMessage = (message: string, maxChars: number, maxLines: number): string[] => {
+  const normalized = message.replace(/\s+/g, ' ').trim()
   const lines: string[] = []
   let current = ''
-  const pushCurrent = () => {
+  let cursor = 0
+
+  const flush = () => {
     if (current.length > 0) {
       lines.push(current)
       current = ''
     }
   }
-  const push = (chunk: string) => {
-    let remaining = chunk
-    while (remaining.length > 0 && lines.length < maxLines) {
-      const capacity = maxChars - current.length - (current.length > 0 ? 1 : 0)
-      if (capacity <= 0) {
-        pushCurrent()
-        continue
-      }
-      if (remaining.length <= capacity) {
-        current = current.length > 0 ? `${current} ${remaining}` : remaining
-        remaining = ''
-      } else if (remaining.length > maxChars && current.length === 0) {
-        // The word itself is longer than a full line — hard-split it.
-        current = remaining.slice(0, maxChars)
-        remaining = remaining.slice(maxChars)
-        pushCurrent()
-      } else {
-        pushCurrent()
-      }
+
+  while (cursor < normalized.length && lines.length < maxLines) {
+    if (normalized[cursor] === ' ') {
+      cursor++
+      continue
+    }
+    const spaceIdx = normalized.indexOf(' ', cursor)
+    const wordEnd = spaceIdx === -1 ? normalized.length : spaceIdx
+    const word = normalized.slice(cursor, wordEnd)
+    const need = current.length === 0 ? word.length : 1 + word.length
+    const room = maxChars - current.length
+
+    if (need <= room) {
+      current = current.length === 0 ? word : `${current} ${word}`
+      cursor = wordEnd
+    } else if (current.length === 0 && word.length > maxChars) {
+      // Word itself is wider than a single line — hard-split it.
+      current = word.slice(0, maxChars)
+      cursor += maxChars
+      flush()
+    } else {
+      flush()
     }
   }
-  for (const word of message.split(/\s+/).filter(Boolean)) {
-    if (lines.length >= maxLines) break
-    push(word)
-  }
-  pushCurrent()
-  // If we ran out of room before consuming the whole message, mark the
-  // overflow with an ellipsis on the final line.
-  const consumed = lines.join(' ').length
-  if (consumed < message.replace(/\s+/g, ' ').trim().length && lines.length > 0) {
+  flush()
+
+  if (cursor < normalized.length && lines.length > 0) {
     const last = lines[lines.length - 1] ?? ''
-    const trimmed = last.length >= maxChars ? `${last.slice(0, maxChars - 1)}…` : `${last}…`
-    lines[lines.length - 1] = trimmed
+    lines[lines.length - 1] = last.length >= maxChars ? `${last.slice(0, maxChars - 1)}…` : `${last}…`
   }
+
   return lines.length > 0 ? lines : ['']
 }
 
