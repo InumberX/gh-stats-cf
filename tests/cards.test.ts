@@ -166,6 +166,29 @@ describe('renderTopLangsCard', () => {
     expect(svg).toContain('Jupyter Notebook 100.00%</desc>')
   })
 
+  it('does not round individual bar segments (only the enclosing mask rounds the bar)', () => {
+    const svg = renderTopLangsCard(
+      [
+        { name: 'A', color: '#111', size: 50 },
+        { name: 'B', color: '#222', size: 30 },
+        { name: 'C', color: '#333', size: 20 },
+      ],
+      themes.default,
+      { hideBorder: false, hideTitle: false, username: 'u', size: 5 }
+    )
+    // Per-segment rounding would leave gaps where adjacent segments meet
+    // (SVG `rx` rounds all four corners of a rect, including the inner
+    // edges). The bar-mask handles outer rounding instead, so the bar
+    // segments (rects with `y="0"` and a colored fill) must not carry an
+    // `rx=` attribute. The mask's own rect uses `fill="white"` and is
+    // excluded by this regex.
+    const segmentRects = svg.match(/<rect[^>]*\by="0"[^>]*fill="#[0-9a-f]+"[^>]*\/>/gi) ?? []
+    expect(segmentRects.length).toBe(3)
+    for (const rect of segmentRects) {
+      expect(rect).not.toMatch(/\brx=/)
+    }
+  })
+
   it('keeps short language names unchanged', () => {
     const svg = renderTopLangsCard([{ name: 'Go', color: '#000', size: 1 }], themes.default, {
       hideBorder: false,

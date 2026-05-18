@@ -31,8 +31,18 @@ export const TOP_LANGS_QUERY_KEYS = {
 
 export const topLangsRoute = new Hono<AppEnv>()
 
+// Conditional cache-key dropping: `border_color` does not affect rendering
+// when `hide_border=true`.
+export const TOP_LANGS_CACHE_OPTIONS = {
+  allowedQueryKeys: TOP_LANGS_QUERY_KEYS,
+  finalize: (params: Record<string, string>): Record<string, string> => {
+    if (params.hide_border === 'true') delete params.border_color
+    return params
+  },
+} as const
+
 // Scope to the sub-app's root only — see the same comment in routes/stats.ts.
-topLangsRoute.use('/', edgeCache({ allowedQueryKeys: TOP_LANGS_QUERY_KEYS }))
+topLangsRoute.use('/', edgeCache(TOP_LANGS_CACHE_OPTIONS))
 
 topLangsRoute.get('/', async (c) => {
   const env = c.env

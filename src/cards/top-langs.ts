@@ -42,20 +42,18 @@ export const renderTopLangsCard = (languages: LanguageEntry[], theme: Theme, opt
     percent: (l.size / totalSize) * 100,
   }))
 
+  // The enclosing `bar-mask` (defined below) already clips the bar to a
+  // rounded outer rectangle. Per-segment `rx` here would round every corner
+  // of the first/last <rect>, including the *inner* corners that meet the
+  // next segment, leaving small background gaps at segment boundaries.
   let runningX = 0
   const barSegments = langs
-    .map((l, i) => {
+    .map((l) => {
       const segWidth = (l.percent / 100) * barWidth
       const x = runningX
       runningX += segWidth
-      // round outer edges of leftmost / rightmost segment
-      const isFirst = i === 0
-      const isLast = i === langs.length - 1
-      const rx = isFirst || isLast ? 4 : 0
       const drawWidth = Math.max(0, segWidth)
-      return `<rect x="${x.toFixed(2)}" y="0" width="${drawWidth.toFixed(
-        2
-      )}" height="${barHeight}" rx="${rx}" fill="#${l.color}"/>`
+      return `<rect x="${x.toFixed(2)}" y="0" width="${drawWidth.toFixed(2)}" height="${barHeight}" fill="#${l.color}"/>`
     })
     .join('')
 

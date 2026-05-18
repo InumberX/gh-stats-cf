@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-// Use the production allow-lists directly so drift in the route configs
-// surfaces as test failures rather than silently weakening this coverage.
-import { STATS_QUERY_KEYS as STATS_KEYS } from '~/routes/stats'
-import { TOP_LANGS_QUERY_KEYS as TOP_LANGS_KEYS } from '~/routes/top-langs'
+// Use the production cache options directly so drift in the route configs
+// (allow-list or finalize) surfaces as test failures rather than silently
+// weakening this coverage.
+import { STATS_CACHE_OPTIONS as STATS_KEYS } from '~/routes/stats'
+import { TOP_LANGS_CACHE_OPTIONS as TOP_LANGS_KEYS } from '~/routes/top-langs'
 import { canonicalCacheKey } from '~/utils/edge-cache'
 
 describe('canonicalCacheKey', () => {
@@ -118,6 +119,51 @@ describe('canonicalCacheKey', () => {
     const padded = canonicalCacheKey('https://example.com/api?theme=%20radical%20', STATS_KEYS)
     const clean = canonicalCacheKey('https://example.com/api?theme=radical', STATS_KEYS)
     expect(padded).toBe(clean)
+  })
+
+  it('drops border_color from the cache key when hide_border=true (stats route)', () => {
+    const a = canonicalCacheKey('https://example.com/api?hide_border=true&border_color=ff0000', STATS_KEYS)
+    const b = canonicalCacheKey('https://example.com/api?hide_border=true&border_color=00ff00', STATS_KEYS)
+    const c = canonicalCacheKey('https://example.com/api?hide_border=true', STATS_KEYS)
+    expect(a).toBe(b)
+    expect(a).toBe(c)
+  })
+
+  it('keeps border_color in the cache key when hide_border is unset (stats route)', () => {
+    const a = canonicalCacheKey('https://example.com/api?border_color=ff0000', STATS_KEYS)
+    const b = canonicalCacheKey('https://example.com/api?border_color=00ff00', STATS_KEYS)
+    expect(a).not.toBe(b)
+  })
+
+  it('drops icon_color from the cache key when show_icons is not true (stats route)', () => {
+    // show_icons defaults to false; an unset show_icons must still drop icon_color.
+    const a = canonicalCacheKey('https://example.com/api?icon_color=ff0000', STATS_KEYS)
+    const b = canonicalCacheKey('https://example.com/api?icon_color=00ff00', STATS_KEYS)
+    const c = canonicalCacheKey('https://example.com/api', STATS_KEYS)
+    expect(a).toBe(b)
+    expect(a).toBe(c)
+    // Same when show_icons is explicitly false.
+    const d = canonicalCacheKey('https://example.com/api?show_icons=false&icon_color=ff0000', STATS_KEYS)
+    const e = canonicalCacheKey('https://example.com/api?show_icons=false', STATS_KEYS)
+    expect(d).toBe(e)
+  })
+
+  it('keeps icon_color in the cache key when show_icons=true (stats route)', () => {
+    const a = canonicalCacheKey('https://example.com/api?show_icons=true&icon_color=ff0000', STATS_KEYS)
+    const b = canonicalCacheKey('https://example.com/api?show_icons=true&icon_color=00ff00', STATS_KEYS)
+    expect(a).not.toBe(b)
+  })
+
+  it('drops border_color when hide_border=true on the top-langs route too', () => {
+    const a = canonicalCacheKey(
+      'https://example.com/api/top-langs?hide_border=true&border_color=ff0000',
+      TOP_LANGS_KEYS
+    )
+    const b = canonicalCacheKey(
+      'https://example.com/api/top-langs?hide_border=true&border_color=00ff00',
+      TOP_LANGS_KEYS
+    )
+    expect(a).toBe(b)
   })
 
   it('canonicalizes exclude_langs (case + ordering + duplicates)', () => {

@@ -72,6 +72,11 @@ export type EdgeCacheOptions = {
   // Unknown keys are dropped, invalid values are dropped to their fallback,
   // and equivalent inputs collapse to one cache entry.
   allowedQueryKeys: Readonly<Record<string, Normalizer>>
+  // Optional post-normalization step. Lets routes express conditional
+  // ignored-key relationships such as "border_color does not matter when
+  // hide_border=true". Receives a mutable copy of the normalized entries
+  // and returns the (possibly reduced) effective set.
+  finalize?: (params: Record<string, string>) => Record<string, string>
 }
 
 // Build a stable cache key from the request URL:
@@ -86,21 +91,22 @@ export type EdgeCacheOptions = {
 // query keys (e.g. `?nonce=...`, `?theme=radical&theme=x`, `?title_color=fff`
 // vs `?title_color=%23FFF`) to fan out separate edge-cache entries for the
 // same rendered SVG, forcing repeated GitHub GraphQL calls.
-export const canonicalCacheKey = (rawUrl: string, allowed: Readonly<Record<string, Normalizer>>): string => {
+export const canonicalCacheKey = (rawUrl: string, options: EdgeCacheOptions): string => {
   const url = new URL(rawUrl)
-  const keep: [string, string][] = []
+  const collected: Record<string, string> = {}
   const seen = new Set<string>()
   for (const key of url.searchParams.keys()) {
     if (seen.has(key)) continue
-    const norm = allowed[key]
+    const norm = options.allowedQueryKeys[key]
     if (!norm) continue
     seen.add(key)
     const raw = url.searchParams.get(key)
     if (raw === null) continue
     const value = norm(raw)
-    if (value !== undefined) keep.push([key, value])
+    if (value !== undefined) collected[key] = value
   }
-  keep.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+  const effective = options.finalize ? options.finalize({ ...collected }) : collected
+  const keep: [string, string][] = Object.entries(effective).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
   url.search = new URLSearchParams(keep).toString()
   return url.toString()
 }
@@ -118,7 +124,7 @@ export const edgeCache =
     }
 
     const cache = caches.default
-    const cacheKey = canonicalCacheKey(c.req.url, options.allowedQueryKeys)
+    const cacheKey = canonicalCacheKey(c.req.url, options)
 
     const cached = await cache.match(cacheKey)
     if (cached) {

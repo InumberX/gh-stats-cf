@@ -31,11 +31,24 @@ export const STATS_QUERY_KEYS = {
 
 export const statsRoute = new Hono<AppEnv>()
 
+// Conditional cache-key dropping: keys that no longer affect rendering when
+// another toggle is set must not fragment the cache. `border_color` does
+// nothing when `hide_border=true`, and `icon_color` does nothing when
+// `show_icons` is false / absent (icons are not drawn).
+export const STATS_CACHE_OPTIONS = {
+  allowedQueryKeys: STATS_QUERY_KEYS,
+  finalize: (params: Record<string, string>): Record<string, string> => {
+    if (params.hide_border === 'true') delete params.border_color
+    if (params.show_icons !== 'true') delete params.icon_color
+    return params
+  },
+} as const
+
 // Scope to the sub-app's root path only. With `use('*', ...)`, the
 // middleware would also run for `/api/top-langs` (which mounts at `/api`'s
 // parent path), letting this route's allow-list strip top-langs-only keys
 // like `langs_count` and serve the wrong cached SVG to top-langs callers.
-statsRoute.use('/', edgeCache({ allowedQueryKeys: STATS_QUERY_KEYS }))
+statsRoute.use('/', edgeCache(STATS_CACHE_OPTIONS))
 
 statsRoute.get('/', async (c) => {
   const env = c.env
