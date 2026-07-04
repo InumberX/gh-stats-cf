@@ -25,14 +25,14 @@
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
-    "hono": "^4.12.19"
+    "hono": "^4.12.27"
   },
   "devDependencies": {
-    "@types/node": "^22.19.19",
-    "oxfmt": "^0.50.0",
-    "oxlint": "^1.65.0",
+    "@types/node": "^26.1.0",
+    "oxfmt": "^0.57.0",
+    "oxlint": "^1.72.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.6",
-    "wrangler": "^4.92.0"
+    "vitest": "^4.1.9",
+    "wrangler": "^4.107.0"
   }
 }
